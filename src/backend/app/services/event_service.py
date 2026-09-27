@@ -80,9 +80,22 @@ class EventService:
         if not values.get("slug"):
             values["slug"] = values["name"].lower().replace(" ", "-")
 
+        tracks_data = values.pop("tracks", None)
+
         with engine.begin() as conn:
             stmt = insert(events_table).values(**values)
             conn.execute(stmt)
+
+            if tracks_data and isinstance(tracks_data, list):
+                for trk in tracks_data:
+                    tid = trk.get("id") or f"trk_{uuid.uuid4().hex[:6]}"
+                    conn.execute(
+                        insert(tracks_table).values(
+                            id=tid,
+                            event_id=ev_id,
+                            name=trk.get("name", "General Track"),
+                        )
+                    )
         return EventService.get_event(ev_id)
 
     @staticmethod

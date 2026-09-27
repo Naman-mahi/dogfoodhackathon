@@ -2,89 +2,144 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, User, Settings, LayoutDashboard, LogOut, ChevronDown } from "lucide-react";
-import { getStoredUser, fetchCurrentUser, logoutUser, AuthUser } from "../lib/auth";
+import { usePathname } from "next/navigation";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  Sparkles,
+  LayoutDashboard,
+  Calendar,
+  FolderGit2,
+  Trophy,
+  Info,
+} from "lucide-react";
+import { AuthUser, getStoredUser, fetchCurrentUser } from "@/lib/auth";
+import UserAccountCard from "./UserAccountCard";
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function loadUser() {
-      const stored = getStoredUser();
-      if (stored) setCurrentUser(stored);
-      const remote = await fetchCurrentUser();
-      if (remote) setCurrentUser(remote);
-    }
-    loadUser();
+    // 1. Initial cached user from localStorage
+    const local = getStoredUser();
+    if (local) setCurrentUser(local);
 
-    // Close dropdown on outside click
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setUserDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // 2. Fetch authenticated user from backend
+    fetchCurrentUser().then((remote) => {
+      if (remote) setCurrentUser(remote);
+    });
+
+    // 3. Listen to local storage changes
+    const onStorage = () => {
+      const u = getStoredUser();
+      if (u) setCurrentUser(u);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const handleLogout = async () => {
-    await logoutUser();
-    setCurrentUser(null);
-    window.location.href = "/login";
+  // Close dropdown on click outside or Escape
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setUserDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setUserDropdownOpen(false);
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setUserDropdownOpen(false);
+  }, [pathname]);
+
+  const navLinks = [
+    { href: "/hackathons", label: "Hackathons", icon: <Calendar className="w-3.5 h-3.5" /> },
+    { href: "/projects", label: "Projects", icon: <FolderGit2 className="w-3.5 h-3.5" /> },
+    { href: "/results", label: "Leaderboard", icon: <Trophy className="w-3.5 h-3.5" /> },
+    { href: "/about", label: "About", icon: <Info className="w-3.5 h-3.5" /> },
+  ];
+
+  const getRoleRingClass = (role?: string) => {
+    if (role === "organizer") return "ring-purple-400/40 text-purple-600 bg-purple-50";
+    if (role === "judge") return "ring-blue-400/40 text-blue-600 bg-blue-50";
+    return "ring-emerald-400/40 text-emerald-600 bg-emerald-50";
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="font-black text-2xl tracking-tight text-slate-900">
+        <Link href="/" className="flex items-center gap-2 group">
+          <span className="font-black text-2xl tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
             DOGFOOD
           </span>
-          <span className="hidden sm:inline-block text-[10px] font-mono uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">
+          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold border border-slate-200/80">
+            <Sparkles className="w-2.5 h-2.5 text-blue-600" />
             Portal
           </span>
         </Link>
 
-        {/* Desktop Navigation Links - NO Dashboard link in header per user instruction */}
-        <nav className="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-600">
-          <Link
-            href="/hackathons"
-            className="hover:text-blue-600 transition-colors"
-          >
-            Hackathons
-          </Link>
-          <Link
-            href="/projects"
-            className="hover:text-blue-600 transition-colors"
-          >
-            Projects
-          </Link>
-          <Link
-            href="/results"
-            className="hover:text-blue-600 transition-colors"
-          >
-            Leaderboard
-          </Link>
-          <Link
-            href="/about"
-            className="hover:text-blue-600 transition-colors"
-          >
-            About
-          </Link>
+        {/* Desktop Nav Links with Active UI/UX Pills */}
+        <nav className="hidden md:flex items-center space-x-1">
+          {navLinks.map((link) => {
+            const isActive =
+              pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  isActive
+                    ? "text-blue-600 bg-blue-50/80 font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <span>{link.label}</span>
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right Action: User Dropdown OR Login/Register for Visitors */}
+        {/* Right Section: User Profile Dropdown or Auth Buttons */}
         <div className="hidden sm:flex items-center space-x-3">
           {currentUser ? (
             <div className="relative" ref={dropdownRef}>
+              {/* Trigger Button */}
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-all border border-slate-200"
+                className={`flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-all border ${
+                  userDropdownOpen
+                    ? "border-blue-500/50 bg-blue-50/30"
+                    : "border-slate-200"
+                } cursor-pointer`}
+                aria-expanded={userDropdownOpen}
+                aria-label="User Account Menu"
               >
                 <img
                   src={
@@ -92,160 +147,114 @@ export default function Navbar() {
                     `https://api.dicebear.com/7.x/identicon/svg?seed=${currentUser.email}`
                   }
                   alt={currentUser.name}
-                  className="w-7 h-7 rounded-full bg-slate-100"
+                  className={`w-7 h-7 rounded-full ring-2 ${getRoleRingClass(
+                    currentUser.role
+                  )} object-cover`}
                 />
                 <div className="text-left">
-                  <div className="text-xs font-bold text-slate-900 leading-none">
+                  <div className="text-xs font-bold text-slate-900 leading-none truncate max-w-[100px]">
                     {currentUser.name.split(" ")[0]}
                   </div>
-                  <div className="text-[10px] font-mono uppercase text-blue-600 font-bold leading-none mt-1">
+                  <div className="text-[10px] font-mono uppercase font-bold leading-none mt-1 text-slate-500">
                     {currentUser.role}
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                    userDropdownOpen ? "rotate-180 text-blue-600" : ""
+                  }`}
+                />
               </button>
 
-              {/* Profile Settings Dropdown Menu */}
+              {/* Dropdown Menu — Reusing UserAccountCard */}
               {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-1">
-                  <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono truncate">{currentUser.email}</p>
-                  </div>
-
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <LayoutDashboard className="w-4 h-4 text-purple-600" />
-                    Role Dashboard
-                  </Link>
-
-                  <Link
-                    href="/settings"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <Settings className="w-4 h-4 text-blue-600" />
-                    Profile Settings
-                  </Link>
-
-                  <div className="border-t border-slate-100 mt-1 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                    >
-                      <LogOut className="w-4 h-4 text-rose-500" />
-                      Sign Out
-                    </button>
-                  </div>
+                <div className="absolute right-0 mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <UserAccountCard
+                    user={currentUser}
+                    onCloseDropdown={() => setUserDropdownOpen(false)}
+                    variant="dropdown"
+                  />
                 </div>
               )}
             </div>
           ) : (
-            <>
+            <div className="flex items-center space-x-2">
               <Link
                 href="/login"
-                className="text-sm font-semibold text-slate-700 hover:text-blue-600 px-3 py-1.5 transition-colors"
+                className="text-xs font-semibold text-slate-700 hover:text-blue-600 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
               >
-                Login
+                Sign In
               </Link>
               <Link
                 href="/register"
-                className="btn-primary text-xs py-2 px-4"
+                className="btn-primary text-xs py-2 px-4 shadow-sm"
               >
                 Register
               </Link>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Mobile menu button */}
+        {/* Mobile Menu Hamburger Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-slate-600 hover:text-slate-900 p-2"
-          aria-label="Toggle Menu"
+          className="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+          aria-label="Toggle navigation menu"
+          type="button"
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-100 bg-white px-4 pt-2 pb-4 space-y-2 text-sm font-semibold">
-          <Link
-            href="/hackathons"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-slate-600"
-          >
-            Hackathons
-          </Link>
-          <Link
-            href="/projects"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-slate-600"
-          >
-            Projects
-          </Link>
-          <Link
-            href="/results"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-slate-600"
-          >
-            Leaderboard
-          </Link>
-          <Link
-            href="/about"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-slate-600"
-          >
-            About
-          </Link>
+        <div className="md:hidden border-b border-slate-100 bg-white px-4 pt-3 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
+          <nav className="space-y-1">
+            {navLinks.map((link) => {
+              const isActive =
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold ${
+                    isActive
+                      ? "text-blue-600 bg-blue-50 font-bold"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {link.icon}
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-          <div className="pt-2 border-t border-slate-100 flex flex-col space-y-2">
+          <div className="pt-2 border-t border-slate-100">
             {currentUser ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2 text-purple-700 font-semibold border border-purple-200 rounded-full"
-                >
-                  Dashboard ({currentUser.role})
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2 text-slate-700 font-semibold border border-slate-200 rounded-full"
-                >
-                  Profile Settings
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full text-center py-2 text-rose-600 font-semibold border border-rose-200 rounded-full"
-                >
-                  Sign Out
-                </button>
-              </>
+              <UserAccountCard
+                user={currentUser}
+                onCloseDropdown={() => setMobileMenuOpen(false)}
+                variant="sidebar"
+              />
             ) : (
-              <>
+              <div className="flex flex-col space-y-2">
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2 text-slate-700 font-semibold border border-slate-200 rounded-full"
+                  className="w-full text-center py-2.5 text-xs font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
                 >
-                  Login
+                  Sign In
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2 text-white bg-slate-900 font-semibold rounded-full"
+                  className="w-full text-center py-2.5 text-xs font-bold text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors shadow-sm"
                 >
                   Register
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>

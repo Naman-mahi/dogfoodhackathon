@@ -12,7 +12,7 @@ import {
 import {
   User,
   Mail,
-  Github,
+  FolderGit2,
   FileText,
   CheckCircle2,
   AlertCircle,
@@ -53,7 +53,11 @@ export default function ProfileSettingsPage() {
 
       // Fetch user profile from backend
       try {
-        const res = await fetch(`/api/v1/users/${user.user_id}`);
+        const authToken = user.token;
+        const res = await fetch(`/api/v1/users/${user.user_id}`, {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+          credentials: "include",
+        });
         if (res.ok) {
           const profile = await res.json();
           setFormData({
@@ -102,9 +106,14 @@ export default function ProfileSettingsPage() {
     setErrorMsg(null);
 
     try {
+      const authToken = currentUser.token;
       const res = await fetch(`/api/v1/users/${currentUser.user_id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -258,7 +267,7 @@ export default function ProfileSettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Github className="w-3.5 h-3.5 text-slate-400" />
+                <FolderGit2 className="w-3.5 h-3.5 text-slate-400" />
                 GitHub Handle
               </label>
               <input

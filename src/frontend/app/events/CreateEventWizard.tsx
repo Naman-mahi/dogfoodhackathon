@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
   CheckCircle2,
@@ -17,51 +17,97 @@ import {
   Sliders,
   Globe,
   Loader2,
+  DollarSign,
+  Users,
+  Clock,
+  ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 
 export default function CreateEventWizard() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+
+  // URL Query param synchronization for step: ?step=1..5
+  const stepParam = parseInt(searchParams?.get("step") || "1", 10);
+  const [step, setStep] = useState(stepParam >= 1 && stepParam <= 5 ? stepParam : 1);
+
+  useEffect(() => {
+    const s = parseInt(searchParams?.get("step") || "1", 10);
+    if (s >= 1 && s <= 5 && s !== step) {
+      setStep(s);
+    }
+  }, [searchParams]);
+
+  const changeStep = (nextStep: number) => {
+    const clamped = Math.min(Math.max(1, nextStep), 5);
+    setStep(clamped);
+    router.push(`/events/new?step=${clamped}`);
+  };
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Form State across the 5 steps
   const [eventData, setEventData] = useState({
-    name: "",
-    slug: "",
-    tagline: "",
+    name: "Autonomous AI & Systems Sprint 2026",
+    slug: "ai-systems-sprint-2026",
+    tagline: "Build next-generation multi-agent systems and offline evaluation appliances.",
     category: "devtools",
     category_label: "Developer Tools",
     format: "online",
     location: "Global · Online",
     host: "DOGFOOD Foundation",
     start_date: "2026-10-01T09:00",
-    end_date: "2026-10-15T18:00",
-    submissions_close: "2026-10-14T23:59",
+    end_date: "2026-10-20T18:00",
+    submissions_close: "2026-10-18T23:59",
     timezone: "UTC",
-    prize_amount: 50000,
-    prize_display: "$50,000 in Bounties",
+    prize_amount: 60000,
+    prize_display: "$60,000 in Bounties",
     team_size_limit: "1-4 Members",
     level: "All Experience Levels",
     tracks: [
-      { id: "trk_01", name: "Core Architecture & Performance", prize: "$25,000" },
-      { id: "trk_02", name: "AI Agent & Evaluation Pipeline", prize: "$25,000" },
+      { id: `trk_${Math.random().toString(36).slice(2, 10)}`, name: "Core Architecture & Performance", prize: "$30,000" },
+      { id: `trk_${Math.random().toString(36).slice(2, 10)}`, name: "AI Agent & Evaluation Pipeline", prize: "$20,000" },
+      { id: `trk_${Math.random().toString(36).slice(2, 10)}`, name: "Offline Resilience & Edge Sync", prize: "$10,000" },
     ],
     rubrics: [
-      { title: "Functionality & Correctness", weight: "40%", description: "Code functions reliably." },
-      { title: "Code Quality & Clean Design", weight: "30%", description: "Clean abstractions, tests." },
-      { title: "Innovation & Originality", weight: "30%", description: "Novel architecture or approach." },
+      { title: "Functionality & Correctness", weight: "40%", description: "Code functions reliably with automated test passes." },
+      { title: "Code Quality & Clean Design", weight: "30%", description: "Clean abstractions, minimal dependencies, documented architecture." },
+      { title: "Innovation & Originality", weight: "30%", description: "Novel problem solving or breakthrough speedup." },
     ],
   });
 
+  // Dynamic Live KPIs Calculations
+  const totalTrackPrizes = eventData.tracks.reduce((sum, trk) => {
+    const num = parseInt(trk.prize.replace(/[^0-9]/g, "") || "0", 10);
+    return sum + num;
+  }, 0);
+  const effectivePrizePool = totalTrackPrizes > 0 ? totalTrackPrizes : Number(eventData.prize_amount) || 0;
+
+  const startMs = new Date(eventData.start_date).getTime();
+  const subCloseMs = new Date(eventData.submissions_close).getTime();
+  const endMs = new Date(eventData.end_date).getTime();
+  const sprintDurationHours = Math.max(0, Math.round((subCloseMs - startMs) / (1000 * 60 * 60)));
+  const sprintDurationDays = (sprintDurationHours / 24).toFixed(1);
+  const reviewWindowHours = Math.max(0, Math.round((endMs - subCloseMs) / (1000 * 60 * 60)));
+
+  const maxTeamMembers = parseInt(eventData.team_size_limit.split("-")[1] || "4", 10) || 4;
+  const projectedTeams = Math.max(10, eventData.tracks.length * 25);
+  const projectedParticipants = projectedTeams * maxTeamMembers;
+  const judgesNeeded = Math.max(3, Math.ceil((projectedTeams * 3) / 10)); // 3 peer-blind reviews per project, max 10 projects/judge
+
+  const totalRubricWeight = eventData.rubrics.reduce((sum, r) => {
+    return sum + parseInt(r.weight.replace(/[^0-9]/g, "") || "0", 10);
+  }, 0);
+
   const handleAddTrack = () => {
-    const nextIdx = eventData.tracks.length + 1;
     setEventData((prev) => ({
       ...prev,
       tracks: [
         ...prev.tracks,
-        { id: `trk_0${nextIdx}`, name: `New Track ${nextIdx}`, prize: "$10,000" },
+        { id: `trk_${Math.random().toString(36).slice(2, 10)}`, name: `New Innovation Track ${prev.tracks.length + 1}`, prize: "$10,000" },
       ],
     }));
   };
@@ -78,6 +124,31 @@ export default function CreateEventWizard() {
       const updated = [...prev.tracks];
       updated[index] = { ...updated[index], [field]: value };
       return { ...prev, tracks: updated };
+    });
+  };
+
+  const handleAddRubric = () => {
+    setEventData((prev) => ({
+      ...prev,
+      rubrics: [
+        ...prev.rubrics,
+        { title: "New Evaluation Criterion", weight: "20%", description: "Clear standard for assessment." },
+      ],
+    }));
+  };
+
+  const handleRemoveRubric = (index: number) => {
+    setEventData((prev) => ({
+      ...prev,
+      rubrics: prev.rubrics.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleRubricChange = (index: number, field: string, value: string) => {
+    setEventData((prev) => {
+      const updated = [...prev.rubrics];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, rubrics: updated };
     });
   };
 
@@ -101,8 +172,8 @@ export default function CreateEventWizard() {
         category: eventData.category,
         category_label: eventData.category_label,
         location: eventData.location,
-        prize_amount: Number(eventData.prize_amount) || 0,
-        prize_display: eventData.prize_display,
+        prize_amount: effectivePrizePool,
+        prize_display: `$${effectivePrizePool.toLocaleString()} USD`,
         host: eventData.host,
         team_size_limit: eventData.team_size_limit,
         level: eventData.level,
@@ -111,14 +182,22 @@ export default function CreateEventWizard() {
         submissions_close: new Date(eventData.submissions_close).toISOString(),
         timezone: eventData.timezone,
         judging_criteria: eventData.rubrics,
+        tracks: eventData.tracks,
       };
+
+      // Read the real session token from the logged-in user
+      let authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("dogfood_user") || "{}");
+        if (storedUser?.token) {
+          authHeaders["Authorization"] = `Bearer ${storedUser.token}`;
+        }
+      } catch { /* no-op */ }
 
       const res = await fetch("/api/v1/events", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: "session=org_7f2a",
-        },
+        headers: authHeaders,
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -139,27 +218,109 @@ export default function CreateEventWizard() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* Step Progress Bar */}
-      <div className="card-modern p-4 sm:p-6 bg-white shadow-xs space-y-3">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-          <span>Step {step} of 5</span>
-          <span className="text-purple-600 uppercase font-mono tracking-wider">
-            {step === 1 && "Basic Information"}
-            {step === 2 && "Timeline & Deadlines"}
-            {step === 3 && "Tracks & Bounties"}
-            {step === 4 && "Rubric & Evaluation"}
-            {step === 5 && "Review & Publish"}
-          </span>
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Real-time Dynamic KPI Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800">
+        <div className="space-y-0.5">
+          <div className="text-[10px] uppercase font-bold text-purple-400 tracking-wider flex items-center gap-1">
+            <DollarSign className="w-3 h-3" /> Prize Budget
+          </div>
+          <div className="text-base sm:text-lg font-black text-white font-mono">
+            ${effectivePrizePool.toLocaleString()}
+          </div>
+          <div className="text-[10px] text-slate-400">
+            {eventData.tracks.length} active tracks
+          </div>
         </div>
-        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div
+
+        <div className="space-y-0.5">
+          <div className="text-[10px] uppercase font-bold text-blue-400 tracking-wider flex items-center gap-1">
+            <Users className="w-3 h-3" /> Projected Capacity
+          </div>
+          <div className="text-base sm:text-lg font-black text-white font-mono">
+            {projectedParticipants}
+          </div>
+          <div className="text-[10px] text-slate-400">
+            ~{projectedTeams} squads ({maxTeamMembers}/team)
+          </div>
+        </div>
+
+        <div className="space-y-0.5">
+          <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Sprint Duration
+          </div>
+          <div className="text-base sm:text-lg font-black text-white font-mono">
+            {sprintDurationDays}d
+          </div>
+          <div className="text-[10px] text-slate-400">
+            {sprintDurationHours} active build hrs
+          </div>
+        </div>
+
+        <div className="space-y-0.5">
+          <div className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" /> Review Window
+          </div>
+          <div className="text-base sm:text-lg font-black text-white font-mono">
+            {reviewWindowHours}h
+          </div>
+          <div className="text-[10px] text-slate-400">
+            Post-lock evaluation
+          </div>
+        </div>
+
+        <div className="space-y-0.5 col-span-2 sm:col-span-1">
+          <div className="text-[10px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" /> Review Capacity
+          </div>
+          <div className="text-base sm:text-lg font-black text-white font-mono">
+            {judgesNeeded} Judges
+          </div>
+          <div className="text-[10px] text-slate-400">
+            3x peer isolation redundancy
+          </div>
+        </div>
+      </div>
+
+      {/* Step Progress Bar - Clickable Tabs Synchronized with URL ?step=1..5 */}
+      <div className="card-modern p-4 sm:p-5 bg-white shadow-xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-500">
+          <div className="flex items-center gap-2">
+            <span>Step {step} of 5</span>
+            <span className="text-purple-600 uppercase font-mono tracking-wider font-extrabold">
+              {step === 1 && "Identity & Format"}
+              {step === 2 && "Timeline & Deadlines"}
+              {step === 3 && "Tracks & Bounties"}
+              {step === 4 && "Judging Rubrics"}
+              {step === 5 && "Review & Publish"}
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-mono">URL param: ?step={step}</span>
+        </div>
+
+        {/* Step Navigation Tabs */}
+        <div className="grid grid-cols-5 gap-1 pt-1">
+          {[
+            { s: 1, label: "Identity" },
+            { s: 2, label: "Schedule" },
+            { s: 3, label: "Tracks" },
+            { s: 4, label: "Rubrics" },
+            { s: 5, label: "Publish" },
+          ].map(({ s, label }) => (
+            <button
               key={s}
-              className={`h-full flex-1 transition-all ${
-                step >= s ? "bg-purple-600" : "bg-transparent"
-              } ${s < 5 ? "border-r border-white/50" : ""}`}
-            />
+              type="button"
+              onClick={() => changeStep(s)}
+              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all ${
+                step === s
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : step > s
+                  ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              {s}. {label}
+            </button>
           ))}
         </div>
       </div>
@@ -182,7 +343,7 @@ export default function CreateEventWizard() {
       {step === 1 && (
         <div className="card-modern p-6 sm:p-10 space-y-6">
           <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-black text-slate-900">Event Identity & Details</h2>
+            <h2 className="text-xl font-black text-slate-900">Event Identity & Branding</h2>
             <p className="text-xs text-slate-500">Define the core branding, format, and category of the hackathon.</p>
           </div>
 
@@ -256,13 +417,16 @@ export default function CreateEventWizard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Location & Format</label>
-                <input
-                  type="text"
-                  value={eventData.location}
-                  onChange={(e) => setEventData({ ...eventData, location: e.target.value })}
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Event Format</label>
+                <select
+                  value={eventData.format}
+                  onChange={(e) => setEventData({ ...eventData, format: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+                >
+                  <option value="online">Online / Virtual</option>
+                  <option value="in-person">In-Person Venue</option>
+                  <option value="hybrid">Hybrid (Global + Regional Hubs)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -270,32 +434,30 @@ export default function CreateEventWizard() {
           <div className="flex justify-end pt-4 border-t border-slate-100">
             <button
               type="button"
-              disabled={!eventData.name.trim()}
-              onClick={() => setStep(2)}
-              className="btn-primary text-xs py-2.5 px-6 flex items-center gap-2"
+              onClick={() => changeStep(2)}
+              className="btn-primary text-xs py-2.5 px-6 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
             >
-              Continue to Timeline <ArrowRight className="w-3.5 h-3.5" />
+              Next: Schedule & Deadlines <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 2: Timeline & Deadlines */}
+      {/* STEP 2: Schedule & Timelines */}
       {step === 2 && (
         <div className="card-modern p-6 sm:p-10 space-y-6">
           <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-black text-slate-900">Event Timeline & Deadlines</h2>
-            <p className="text-xs text-slate-500">
-              Configure submission cut-off dates. Remember that Tier 1 strictly refuses submissions past deadline.
-            </p>
+            <h2 className="text-xl font-black text-slate-900">Sprint Timeline & Deadlines</h2>
+            <p className="text-xs text-slate-500">Configure key milestone timestamps. Submissions lock automatically when the deadline elapses.</p>
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Hackathon Kickoff (Start)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Sprint Start Date</label>
                 <input
                   type="datetime-local"
+                  required
                   value={eventData.start_date}
                   onChange={(e) => setEventData({ ...eventData, start_date: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -303,9 +465,27 @@ export default function CreateEventWizard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Event Conclusion (End)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Submissions Lock Deadline
+                  <span className="text-rose-500 ml-1 font-bold">*</span>
+                </label>
                 <input
                   type="datetime-local"
+                  required
+                  value={eventData.submissions_close}
+                  onChange={(e) => setEventData({ ...eventData, submissions_close: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 border-rose-300 bg-rose-50/30"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Hard lock: projects refuse edits after this instant.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Judging & Event End Date</label>
+                <input
+                  type="datetime-local"
+                  required
                   value={eventData.end_date}
                   onChange={(e) => setEventData({ ...eventData, end_date: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -315,26 +495,28 @@ export default function CreateEventWizard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Submissions Deadline (Strict Cut-off)
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={eventData.submissions_close}
-                  onChange={(e) => setEventData({ ...eventData, submissions_close: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 font-bold text-rose-700"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Timezone</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Timezone</label>
                 <input
                   type="text"
                   value={eventData.timezone}
                   onChange={(e) => setEventData({ ...eventData, timezone: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                  placeholder="UTC, PST, EST, etc."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Team Size Limit</label>
+                <select
+                  value={eventData.team_size_limit}
+                  onChange={(e) => setEventData({ ...eventData, team_size_limit: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="1-2 Members">1 - 2 Members (Pair Programming)</option>
+                  <option value="1-4 Members">1 - 4 Members (Standard Squad)</option>
+                  <option value="1-5 Members">1 - 5 Members (Expanded Team)</option>
+                  <option value="Solo Only">Solo Builders Only</option>
+                </select>
               </div>
             </div>
           </div>
@@ -342,98 +524,87 @@ export default function CreateEventWizard() {
           <div className="flex justify-between pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => changeStep(1)}
               className="btn-secondary text-xs py-2.5 px-5 flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
             <button
               type="button"
-              onClick={() => setStep(3)}
-              className="btn-primary text-xs py-2.5 px-6 flex items-center gap-2"
+              onClick={() => changeStep(3)}
+              className="btn-primary text-xs py-2.5 px-6 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
             >
-              Continue to Tracks & Bounties <ArrowRight className="w-3.5 h-3.5" />
+              Next: Tracks & Bounties <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: Tracks & Prizes */}
+      {/* STEP 3: Tracks & Bounties */}
       {step === 3 && (
         <div className="card-modern p-6 sm:p-10 space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-black text-slate-900">Tracks & Prize Pool</h2>
-            <p className="text-xs text-slate-500">Configure competition tracks and prize pool distributions.</p>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Tracks & Prize Bounties</h2>
+              <p className="text-xs text-slate-500">
+                Prizes auto-sum into the total dynamic prize pool (${effectivePrizePool.toLocaleString()}).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddTrack}
+              className="btn-secondary text-xs py-2 px-3.5 text-purple-700 border-purple-200 hover:bg-purple-50 flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Track
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Total Prize Amount ($)</label>
-              <input
-                type="number"
-                value={eventData.prize_amount}
-                onChange={(e) => setEventData({ ...eventData, prize_amount: Number(e.target.value) })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Prize Display Text</label>
-              <input
-                type="text"
-                value={eventData.prize_display}
-                onChange={(e) => setEventData({ ...eventData, prize_display: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-
-          {/* Dynamic Tracks List */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Competition Tracks
-              </label>
-              <button
-                type="button"
-                onClick={handleAddTrack}
-                className="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add Track
-              </button>
-            </div>
-
+          <div className="space-y-4">
             {eventData.tracks.map((trk, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                <input
-                  type="text"
-                  value={trk.id}
-                  onChange={(e) => handleTrackChange(idx, "id", e.target.value)}
-                  placeholder="trk_01"
-                  className="w-20 bg-white border border-slate-200 rounded-lg p-2 text-xs font-mono"
-                />
-                <input
-                  type="text"
-                  value={trk.name}
-                  onChange={(e) => handleTrackChange(idx, "name", e.target.value)}
-                  placeholder="Track Title"
-                  className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900"
-                />
-                <input
-                  type="text"
-                  value={trk.prize}
-                  onChange={(e) => handleTrackChange(idx, "prize", e.target.value)}
-                  placeholder="Prize"
-                  className="w-24 bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 font-bold"
-                />
-                {eventData.tracks.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTrack(idx)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+              <div
+                key={trk.id || idx}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">
+                    Track #{idx + 1}
+                  </span>
+                  {eventData.tracks.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTrack(idx)}
+                      className="text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Track Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={trk.name}
+                      onChange={(e) => handleTrackChange(idx, "name", e.target.value)}
+                      placeholder="e.g. Distributed State & Zero-Knowledge"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Prize Bounty</label>
+                    <input
+                      type="text"
+                      required
+                      value={trk.prize}
+                      onChange={(e) => handleTrackChange(idx, "prize", e.target.value)}
+                      placeholder="$25,000"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -441,40 +612,107 @@ export default function CreateEventWizard() {
           <div className="flex justify-between pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => changeStep(2)}
               className="btn-secondary text-xs py-2.5 px-5 flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
             <button
               type="button"
-              onClick={() => setStep(4)}
-              className="btn-primary text-xs py-2.5 px-6 flex items-center gap-2"
+              onClick={() => changeStep(4)}
+              className="btn-primary text-xs py-2.5 px-6 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
             >
-              Continue to Rubric <ArrowRight className="w-3.5 h-3.5" />
+              Next: Rubrics & Evaluation <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 4: Rubric & Criteria */}
+      {/* STEP 4: Rubric & Evaluation */}
       {step === 4 && (
         <div className="card-modern p-6 sm:p-10 space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-black text-slate-900">Judging Rubric & Weights</h2>
-            <p className="text-xs text-slate-500">
-              Establish scoring dimensions for blind peer evaluations (Tier 2 requirement).
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Judging Rubrics & Weight Calibration</h2>
+              <p className="text-xs text-slate-500">
+                Criteria used by assigned judges during isolated peer reviews. Current total:{" "}
+                <span className={`font-mono font-bold ${totalRubricWeight === 100 ? "text-emerald-600" : "text-amber-600"}`}>
+                  {totalRubricWeight}%
+                </span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddRubric}
+              className="btn-secondary text-xs py-2 px-3.5 text-purple-700 border-purple-200 hover:bg-purple-50 flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Criterion
+            </button>
           </div>
 
-          <div className="space-y-3">
-            {eventData.rubrics.map((r, idx) => (
-              <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-900">{r.title}</span>
-                  <span className="text-xs font-bold text-purple-600 font-mono">{r.weight}</span>
+          {totalRubricWeight !== 100 && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Weights currently sum to {totalRubricWeight}%. Recommended total is 100%.</span>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {eventData.rubrics.map((rubric, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                    Criterion #{idx + 1}
+                  </span>
+                  {eventData.rubrics.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRubric(idx)}
+                      className="text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                    </button>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500">{r.description}</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="sm:col-span-3">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Criterion Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={rubric.title}
+                      onChange={(e) => handleRubricChange(idx, "title", e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Weight</label>
+                    <input
+                      type="text"
+                      required
+                      value={rubric.weight}
+                      onChange={(e) => handleRubricChange(idx, "weight", e.target.value)}
+                      placeholder="30%"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Scoring Description & Instructions</label>
+                  <input
+                    type="text"
+                    value={rubric.description}
+                    onChange={(e) => handleRubricChange(idx, "description", e.target.value)}
+                    placeholder="Specific questions evaluators should grade against."
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -482,17 +720,17 @@ export default function CreateEventWizard() {
           <div className="flex justify-between pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setStep(3)}
+              onClick={() => changeStep(3)}
               className="btn-secondary text-xs py-2.5 px-5 flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
             <button
               type="button"
-              onClick={() => setStep(5)}
-              className="btn-primary text-xs py-2.5 px-6 flex items-center gap-2"
+              onClick={() => changeStep(5)}
+              className="btn-primary text-xs py-2.5 px-6 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
             >
-              Preview & Publish <ArrowRight className="w-3.5 h-3.5" />
+              Next: Review &amp; Publish <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -502,18 +740,18 @@ export default function CreateEventWizard() {
       {step === 5 && (
         <div className="card-modern p-6 sm:p-10 space-y-6">
           <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-black text-slate-900">Review & Publish Event</h2>
-            <p className="text-xs text-slate-500">Review the generated event card before publishing to the platform.</p>
+            <h2 className="text-xl font-black text-slate-900">Review &amp; Publish Hackathon</h2>
+            <p className="text-xs text-slate-500">Confirm parameters before deploying the event live to the platform.</p>
           </div>
 
           {/* Event Preview Card */}
           <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-purple-950 text-white shadow-lg space-y-4">
             <div className="flex justify-between items-start">
-              <span className="text-[10px] font-mono uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-mono uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-full font-bold">
                 {eventData.category_label}
               </span>
-              <span className="text-xs font-bold text-emerald-400 font-mono">
-                {eventData.prize_display}
+              <span className="text-sm font-bold text-emerald-400 font-mono">
+                ${effectivePrizePool.toLocaleString()} USD
               </span>
             </div>
 
@@ -522,10 +760,10 @@ export default function CreateEventWizard() {
               <p className="text-xs text-slate-300 mt-1">{eventData.tagline}</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-300 pt-2 border-t border-slate-800">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-300 pt-3 border-t border-slate-800">
               <div>
-                <span className="text-[10px] uppercase text-slate-400 block font-bold">Submissions Close</span>
-                <span>{new Date(eventData.submissions_close).toLocaleDateString()}</span>
+                <span className="text-[10px] uppercase text-slate-400 block font-bold">Submissions Lock</span>
+                <span className="font-mono text-emerald-300">{new Date(eventData.submissions_close).toLocaleDateString()}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase text-slate-400 block font-bold">Format</span>
@@ -533,7 +771,11 @@ export default function CreateEventWizard() {
               </div>
               <div>
                 <span className="text-[10px] uppercase text-slate-400 block font-bold">Tracks</span>
-                <span>{eventData.tracks.length} Tracks</span>
+                <span>{eventData.tracks.length} Categories</span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase text-slate-400 block font-bold">Host</span>
+                <span>{eventData.host}</span>
               </div>
             </div>
           </div>
@@ -541,7 +783,7 @@ export default function CreateEventWizard() {
           <div className="flex justify-between pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setStep(4)}
+              onClick={() => changeStep(4)}
               className="btn-secondary text-xs py-2.5 px-5 flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
@@ -550,17 +792,17 @@ export default function CreateEventWizard() {
               type="button"
               disabled={loading}
               onClick={handleSubmitEvent}
-              className="btn-primary text-xs py-3 px-8 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+              className="btn-primary text-xs py-3 px-8 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-md shadow-purple-600/20 font-bold"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Publishing Event...
+                  Deploying Hackathon...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  Publish Hackathon
+                  Publish Hackathon Live
                 </>
               )}
             </button>

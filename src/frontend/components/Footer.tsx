@@ -1,7 +1,38 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { getStoredUser, fetchCurrentUser } from "../lib/auth";
 
 export default function Footer() {
+  const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user?.role) {
+      setRole(user.role);
+    }
+    fetchCurrentUser().then((u) => {
+      if (u?.role) setRole(u.role);
+    });
+  }, []);
+
+  // For organizers and judges, or any organizer/judge dashboard or event management routes,
+  // console occupies full layout without public website footer.
+  if (
+    role === "organizer" ||
+    role === "judge" ||
+    pathname.startsWith("/dashboard/organizer") ||
+    pathname.startsWith("/dashboard/judge") ||
+    pathname.startsWith("/organizer") ||
+    pathname.startsWith("/judge") ||
+    pathname.startsWith("/events/new")
+  ) {
+    return null;
+  }
+
   return (
     <footer className="bg-slate-50 border-t border-slate-200 text-slate-600 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

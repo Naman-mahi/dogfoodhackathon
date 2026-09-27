@@ -96,6 +96,17 @@ def seed_database():
                     faqs=h.get("faqs"),
                 )
             )
+            for trk in h.get("tracks", []):
+                try:
+                    conn.execute(
+                        insert(tracks_table).values(
+                            id=f"{h['id']}_{trk['id']}",
+                            event_id=h["id"],
+                            name=trk["name"],
+                        )
+                    )
+                except Exception:
+                    pass
 
         # Also ensure evt_01 exists for acceptance test parity if distinct
         evt = fixtures.get("event", {})

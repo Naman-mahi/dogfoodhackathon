@@ -89,6 +89,7 @@ class EventBase(BaseModel):
 
 class EventCreate(EventBase):
     id: Optional[str] = None
+    tracks: Optional[List[Dict[str, Any]]] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str] = None
