@@ -11,7 +11,8 @@ import { getStoredUser } from "@/lib/auth";
 
 export default function HackathonsPage() {
   const router = useRouter();
-  const [hackathonsList, setHackathonsList] = useState<Hackathon[]>(HACKATHONS_DATA);
+  const [hackathonsList, setHackathonsList] = useState<Hackathon[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -24,9 +25,15 @@ export default function HackathonsPage() {
 
   useEffect(() => {
     // 1. Fetch live events from backend
-    fetchEvents().then((evs) => {
-      if (evs && evs.length > 0) setHackathonsList(evs);
-    });
+    fetchEvents()
+      .then((evs) => {
+        if (evs && evs.length > 0) setHackathonsList(evs);
+      })
+      .catch((err) => {
+        console.warn("Using fallback hackathons data:", err);
+        setHackathonsList(HACKATHONS_DATA);
+      })
+      .finally(() => setLoadingEvents(false));
 
     // 2. Fetch user's registered events from backend API
     const user = getStoredUser();
@@ -358,7 +365,13 @@ export default function HackathonsPage() {
           </div>
 
           {/* Cards Grid */}
-          {filteredHackathons.length === 0 ? (
+          {loadingEvents ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="card-modern h-96 animate-pulse bg-slate-100/70" />
+              ))}
+            </div>
+          ) : filteredHackathons.length === 0 ? (
             <div className="text-center py-16 card-modern p-8 space-y-4">
               <h3 className="text-base font-bold text-slate-800">No hackathons found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">

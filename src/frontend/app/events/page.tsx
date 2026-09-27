@@ -34,6 +34,7 @@ import { HACKATHONS_DATA, Project } from "@/lib/mockData";
 import DataTable, { ColumnDef } from "@/components/DataTable";
 import {
   fetchEvents,
+  fetchEvent,
   fetchRegistrationStatus,
   fetchEventRegistrations,
   removeParticipantRegistration,
@@ -82,13 +83,10 @@ function EventsContent() {
   }, []);
 
   useEffect(() => {
-    fetchEvents().then((events) => {
-      const found = events.find(
-        (h) => h.slug === eventIdentifier || h.id === eventIdentifier
-      );
+    fetchEvent(eventIdentifier).then((found) => {
       if (found) {
         setHackathon(found);
-        fetchRegistrationStatus(found.id).then((st) => {
+        fetchRegistrationStatus(found.id || found.slug).then((st) => {
           setIsRegistered(st.registered);
         });
       }

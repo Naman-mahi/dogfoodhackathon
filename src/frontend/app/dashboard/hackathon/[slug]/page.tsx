@@ -26,6 +26,7 @@ import {
 import { getStoredUser, fetchCurrentUser, AuthUser } from "@/lib/auth";
 import {
   fetchEvents,
+  fetchEvent,
   fetchRegistrationStatus,
   registerForEvent,
   fetchMySubmission,
@@ -102,8 +103,7 @@ export default function HackathonDetailPage() {
       const remote = await fetchCurrentUser();
       if (remote) setUser(remote);
 
-      const events = await fetchEvents();
-      const found = events?.find((e) => e.slug === slug || e.id === slug);
+      const found = await fetchEvent(slug);
       setEvent(found || null);
 
       if (found) {

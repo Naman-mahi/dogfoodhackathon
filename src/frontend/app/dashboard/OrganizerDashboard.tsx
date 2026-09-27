@@ -36,8 +36,11 @@ import {
   createJudge,
   updateJudge,
   deleteJudge,
+  updateEvent,
+  fetchProjects,
   isEventRegistrationOpen,
   JudgeData,
+  Project,
 } from "../../lib/api";
 import { Hackathon } from "../../lib/mockData";
 import DataTable, { ColumnDef } from "../../components/DataTable";
@@ -97,6 +100,9 @@ export default function OrganizerDashboard({
   const [selectedHackathonSlug, setSelectedHackathonSlug] = useState<string>("");
   const [judgeDeleteConfirm, setJudgeDeleteConfirm] = useState<string | null>(null);
 
+  // Projects management state
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+
   // New judge form state
   const [newJudgeId, setNewJudgeId] = useState("");
   const [newJudgeName, setNewJudgeName] = useState("");
@@ -117,20 +123,32 @@ export default function OrganizerDashboard({
     }
   };
 
-  // Load events and judges when active tab changes
+  // Load complete live data on mount so all tabs and KPIs are dynamic
   useEffect(() => {
-    if (activeTab === "events" || activeTab === "hackathon_judges") {
-      setEventsLoading(true);
-      fetchEvents()
-        .then((evs) => {
-          setEvents(evs || []);
-          if (evs && evs.length > 0 && !selectedHackathonSlug) {
-            setSelectedHackathonSlug(evs[0].slug || evs[0].id);
-          }
-        })
-        .finally(() => setEventsLoading(false));
-    }
+    setEventsLoading(true);
+    fetchEvents()
+      .then((evs) => {
+        setEvents(evs || []);
+        if (evs && evs.length > 0 && !selectedHackathonSlug) {
+          setSelectedHackathonSlug(evs[0].slug || evs[0].id);
+        }
+      })
+      .finally(() => setEventsLoading(false));
 
+    loadJudges();
+
+    fetchProjects().then((projs) => {
+      setProjectsList(projs || []);
+    });
+  }, []);
+
+  // Refresh data when navigating between operational tabs
+  useEffect(() => {
+    if (activeTab === "events" || activeTab === "hackathon_judges" || activeTab === "lifecycle") {
+      fetchEvents().then((evs) => {
+        setEvents(evs || []);
+      });
+    }
     if (activeTab === "judges" || activeTab === "hackathon_judges" || activeTab === "progress") {
       loadJudges();
     }
@@ -923,13 +941,13 @@ export default function OrganizerDashboard({
           </div>
         )}
 
-        {/* ── LIFECYCLE TAB ── */}
+        {/* ── LIFECYCLE TAB (100% DYNAMIC) ── */}
         {activeTab === "lifecycle" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">Event Lifecycle Management</h1>
-                <p className="text-xs text-slate-500">Control the submissions window and automated deadline enforcement.</p>
+                <p className="text-xs text-slate-500">Control registration windows, submissions close, and automated deadline enforcement across events.</p>
               </div>
               <Link
                 href="/events/new"
@@ -939,37 +957,90 @@ export default function OrganizerDashboard({
               </Link>
             </div>
 
-            <div className="card-modern p-6 space-y-4">
-              <h2 className="text-sm font-bold text-slate-900">Submissions Status Controller</h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                When the window is closed, any POST request to <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">/projects/new</code> will be refused with an HTTP 4xx error.
-              </p>
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs font-bold text-slate-800">Current Window State</div>
-                  <div className="text-[11px] text-slate-500">
-                    {submissionsClosed
-                      ? "Submissions are currently REFUSED (Deadline: 2026-03-01T18:00:00Z)"
-                      : "Submissions are currently ACCEPTED"}
+            {/* Event Selector */}
+            <div className="card-modern p-5 bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Competition Event</div>
+                <div className="text-xs text-slate-500">Configure submissions window and deadline for a specific event.</div>
+              </div>
+              <select
+                value={selectedHackathonSlug}
+                onChange={(e) => setSelectedHackathonSlug(e.target.value)}
+                className="input-field text-xs py-2 px-3 font-semibold text-slate-900 bg-slate-50 border-slate-200 rounded-xl"
+              >
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.slug || ev.id}>
+                    {ev.title || ev.name} ({ev.slug || ev.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {activeHackathon && (
+              <div className="card-modern p-6 space-y-5 bg-white border border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-base font-black text-slate-900">{activeHackathon.title || activeHackathon.name}</h2>
+                    <span className="text-xs text-slate-500 font-mono">ID: {activeHackathon.id} · Slug: {activeHackathon.slug}</span>
+                  </div>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                    isEventRegistrationOpen(activeHackathon).isOpen
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                  }`}>
+                    {isEventRegistrationOpen(activeHackathon).isOpen ? "Registration Open" : "Registration Closed"}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-slate-900">Registration &amp; Submissions Gateway</div>
+                    <div className="text-xs text-slate-500">
+                      {isEventRegistrationOpen(activeHackathon).isOpen
+                        ? "Currently accepting participant registrations and submissions."
+                        : `Submissions currently REFUSED: ${isEventRegistrationOpen(activeHackathon).reason || "Window closed."}`}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const nextOpen = !(activeHackathon.isRegistrationOpen ?? true);
+                      const res = await updateEvent(activeHackathon.id, { is_registration_open: nextOpen });
+                      if (res.success) {
+                        toast.success(`Event registration set to: ${nextOpen ? "OPEN" : "CLOSED"}`);
+                        setEvents((prev) =>
+                          prev.map((e) => (e.id === activeHackathon.id ? { ...e, isRegistrationOpen: nextOpen } : e))
+                        );
+                      } else {
+                        toast.error(res.error || "Failed to update event state.");
+                      }
+                    }}
+                    className={`text-xs px-4 py-2 rounded-xl font-bold transition-all cursor-pointer shadow-xs ${
+                      isEventRegistrationOpen(activeHackathon).isOpen
+                        ? "bg-rose-600 hover:bg-rose-700 text-white"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    }`}
+                  >
+                    {isEventRegistrationOpen(activeHackathon).isOpen ? "Close Window Now" : "Open Window Now"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">Current Deadline</span>
+                    <div className="text-sm font-bold text-slate-900 font-mono">
+                      {activeHackathon.registration_deadline || activeHackathon.registrationDeadline || activeHackathon.submissions_close || "No deadline set"}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">Live Entries</span>
+                    <div className="text-sm font-bold text-slate-900">
+                      {activeHackathon.participantCount || 0} Participants · {activeHackathon.submissionCount || 0} Submissions
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSubmissionsClosed(!submissionsClosed)}
-                  className={`text-xs px-4 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-                    submissionsClosed
-                      ? "bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300"
-                      : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300"
-                  }`}
-                >
-                  {submissionsClosed ? "Closed (Click to Open)" : "Open (Click to Close)"}
-                </button>
               </div>
-              <div className="text-[11px] text-slate-500 bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>The acceptance test suite <code className="font-mono text-amber-800">run.py</code> expects submissions to be refused by default because the fixture deadline is in the past.</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -977,7 +1048,7 @@ export default function OrganizerDashboard({
         {activeTab === "rubric" && (
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Scoring Rubric & Weights</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Scoring Rubric &amp; Weights</h1>
               <p className="text-xs text-slate-500">Configure criterion weights for normalized composite scoring (Tier 2 requirement).</p>
             </div>
 
@@ -1024,37 +1095,44 @@ export default function OrganizerDashboard({
           </div>
         )}
 
-        {/* ── JUDGE PROGRESS TAB ── */}
+        {/* ── JUDGE PROGRESS TAB (100% DYNAMIC) ── */}
         {activeTab === "progress" && (
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Judge Evaluation Progress</h1>
-              <p className="text-xs text-slate-500">Monitor individual judge evaluation queues while maintaining strict zero-trust peer isolation.</p>
+              <p className="text-xs text-slate-500">Monitor individual evaluator queues and track assignments while maintaining zero-trust isolation.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {judges.map((j, idx) => (
-                <div key={j.id} className="card-modern p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900">{j.name}</span>
-                    <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono font-bold">
-                      {j.id}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    Tracks: {j.tracks?.join(", ") || "General"}
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-500">Completion</span>
-                      <span className="font-bold text-emerald-600">100%</span>
+              {judges.map((j) => {
+                const assignedTracks = j.tracks || [];
+                const candidateProjects = projectsList.filter((p) =>
+                  assignedTracks.length === 0 || assignedTracks.includes(p.trackLabel || p.track)
+                );
+
+                return (
+                  <div key={j.id} className="card-modern p-5 space-y-3 bg-white">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">{j.name}</span>
+                      <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono font-bold">
+                        {j.id}
+                      </span>
                     </div>
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full w-full" />
+                    <div className="text-[11px] text-slate-500 line-clamp-1">
+                      Tracks: {assignedTracks.length > 0 ? assignedTracks.join(", ") : "All Tracks"}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-500">Track Queue</span>
+                        <span className="font-bold text-purple-600">{candidateProjects.length} candidate projects</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-600 rounded-full w-full" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
