@@ -2,44 +2,174 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  loginWithCredentials,
+  quickPersonaLogin,
+  socialLogin,
+  TEST_PERSONAS,
+  AuthUser,
+} from "../../lib/auth";
+import { ShieldCheck, UserCheck, Code, Award, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Social Auth Modal State
+  const [socialModal, setSocialModal] = useState<"google" | "github" | "linkedin" | null>(null);
+  const [socialRole, setSocialRole] = useState<"participant" | "judge">("participant");
+
+  const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const user = await loginWithCredentials(email, password);
+      setSuccess(`Signed in as ${user.name} (${user.role})`);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please verify your credentials.");
+    } finally {
       setLoading(false);
-      setMessage(`Logged in successfully as ${email}`);
-    }, 400);
+    }
   };
 
-  const handleSocialClick = (provider: string) => {
-    setMessage(`Connecting to ${provider}...`);
+  const handleQuickLogin = async (personaKey: "organizer" | "judge_a" | "judge_b" | "participant") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await quickPersonaLogin(personaKey);
+      setSuccess(`Authenticated as ${user.name}`);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 400);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmSocial = async () => {
+    if (!socialModal) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await socialLogin(socialModal, socialRole);
+      setSuccess(`Connected with ${socialModal.toUpperCase()} as ${user.name}`);
+      setSocialModal(null);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 400);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16 space-y-8">
+    <div className="max-w-xl mx-auto px-4 py-12 space-y-8">
+      {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
-        <p className="text-xs text-slate-500">Sign in to your DOGFOOD account</p>
+        <span className="text-[10px] font-mono tracking-widest uppercase bg-slate-900 text-white px-2.5 py-1 rounded">
+          Authentication Gateway
+        </span>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Access Portal</h1>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          Sign in using test personas, social OAuth credentials, or direct email/password.
+        </p>
       </div>
 
+      {/* 1-Click Role Personas Bar */}
+      <div className="card-modern p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+              Instant 1-Click Test Personas
+            </h2>
+          </div>
+          <span className="text-[10px] font-mono text-slate-400">Spec-Verified</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleQuickLogin("organizer")}
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+          >
+            <ShieldCheck className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-white">Organizer</div>
+              <div className="text-[10px] text-slate-400">Admin Control & CSV Export</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleQuickLogin("judge_a")}
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+          >
+            <Award className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-white">Judge A (Tomas)</div>
+              <div className="text-[10px] text-slate-400">Isolated Track Scoring</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleQuickLogin("judge_b")}
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+          >
+            <UserCheck className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-white">Judge B (Wei)</div>
+              <div className="text-[10px] text-slate-400">Blind Peer Score Review</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleQuickLogin("participant")}
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+          >
+            <Code className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-white">Participant (Ada)</div>
+              <div className="text-[10px] text-slate-400">Team Nightshift Submissions</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Authentication Card */}
       <div className="card-modern p-8 shadow-sm space-y-6">
-        {/* Social Media Login (Icons Only) */}
+        {/* Social Media Login (Google, GitHub, LinkedIn) */}
         <div className="space-y-3">
           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block text-center">
-            Sign in with
+            Sign in with Social OAuth
           </label>
           <div className="flex items-center justify-center gap-3">
-            {/* Google Icon */}
+            {/* Google */}
             <button
               type="button"
-              onClick={() => handleSocialClick("Google")}
+              disabled={loading}
+              onClick={() => setSocialModal("google")}
               aria-label="Sign in with Google"
               className="w-12 h-12 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-xs group"
             >
@@ -63,10 +193,11 @@ export default function LoginPage() {
               </svg>
             </button>
 
-            {/* GitHub Icon */}
+            {/* GitHub */}
             <button
               type="button"
-              onClick={() => handleSocialClick("GitHub")}
+              disabled={loading}
+              onClick={() => setSocialModal("github")}
               aria-label="Sign in with GitHub"
               className="w-12 h-12 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-xs text-slate-800 hover:text-black group"
             >
@@ -79,10 +210,11 @@ export default function LoginPage() {
               </svg>
             </button>
 
-            {/* LinkedIn Icon */}
+            {/* LinkedIn */}
             <button
               type="button"
-              onClick={() => handleSocialClick("LinkedIn")}
+              disabled={loading}
+              onClick={() => setSocialModal("linkedin")}
               aria-label="Sign in with LinkedIn"
               className="w-12 h-12 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-xs text-[#0A66C2] group"
             >
@@ -96,13 +228,27 @@ export default function LoginPage() {
         <div className="relative flex py-1 items-center">
           <div className="flex-grow border-t border-slate-100"></div>
           <span className="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-            Or with email
+            Or with email credentials
           </span>
           <div className="flex-grow border-t border-slate-100"></div>
         </div>
 
+        {/* Notifications */}
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{success}</span>
+          </div>
+        )}
+
         {/* Email & Password Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleStandardLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
             <input
@@ -110,7 +256,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.org"
+              placeholder="e.g. organizer@dogfood.dev or ada@example.org"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -130,23 +276,17 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="•••••••• (Default: Password123!)"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          {message && (
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium">
-              {message}
-            </div>
-          )}
 
           <button
             type="submit"
             disabled={loading}
             className="w-full btn-primary text-xs py-3"
           >
-            {loading ? "Signing In..." : "Sign In"}
+            {loading ? "Authenticating..." : "Sign In to Portal"}
           </button>
         </form>
 
@@ -157,6 +297,66 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {/* Social OAuth Modal */}
+      {socialModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="card-modern max-w-sm w-full p-6 bg-white shadow-xl space-y-4">
+            <h3 className="text-base font-bold text-slate-900 capitalize">
+              Connect with {socialModal}
+            </h3>
+            <p className="text-xs text-slate-500">
+              Select your platform role to complete authentication via {socialModal.toUpperCase()}:
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-600 uppercase">Role</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSocialRole("participant")}
+                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
+                    socialRole === "participant"
+                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  Participant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSocialRole("judge")}
+                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
+                    socialRole === "judge"
+                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  Judge
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSocialModal(null)}
+                className="flex-1 btn-secondary text-xs py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleConfirmSocial}
+                className="flex-1 btn-primary text-xs py-2"
+              >
+                {loading ? "Connecting..." : "Authorize"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
