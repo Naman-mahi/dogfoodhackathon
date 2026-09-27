@@ -23,6 +23,7 @@ events_table = Table(
     Column("start_date", DateTime(timezone=True), nullable=True),
     Column("end_date", DateTime(timezone=True), nullable=True),
     Column("submissions_close", DateTime(timezone=True), nullable=False),
+    Column("registration_deadline", DateTime(timezone=True), nullable=True),
     Column("timezone", String(64), nullable=True, server_default="UTC"),
     Column("is_free", Boolean, nullable=False, server_default="true"),
     Column("entry_fee_display", String(64), nullable=True, server_default="Free"),

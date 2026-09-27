@@ -7,10 +7,41 @@ from app.db.models.event import events_table
 from app.db.models.track import tracks_table
 from app.db.models.registration import event_registrations_table
 from app.schemas.event import EventCreate, EventUpdate, TrackCreate
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, ForbiddenException
 from app.services.email_service import EmailService
 
 class EventService:
+    @staticmethod
+    def check_registration_open(evt: Dict[str, Any]) -> tuple:
+        """
+        Check if registration is currently open for the given event.
+        Returns: (is_open: bool, reason_if_closed: Optional[str], deadline: Optional[datetime])
+        """
+        status = (evt.get("status") or "").lower()
+        if status in ("concluded", "completed", "closed"):
+            return False, "This hackathon has concluded.", None
+
+        # Registration deadline priority: registration_deadline -> submissions_close -> end_date
+        deadline = evt.get("registration_deadline") or evt.get("submissions_close") or evt.get("end_date")
+        if not deadline:
+            return True, None, None
+
+        if isinstance(deadline, str):
+            try:
+                deadline = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+            except Exception:
+                pass
+
+        if isinstance(deadline, datetime):
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            if now > deadline:
+                formatted = deadline.strftime("%b %d, %Y at %H:%M UTC")
+                return False, f"Registration deadline passed on {formatted}.", deadline
+
+        return True, None, deadline if isinstance(deadline, datetime) else None
+
     @staticmethod
     def get_event(event_id_or_slug: str):
         with engine.connect() as conn:
@@ -27,6 +58,9 @@ class EventService:
 
             res = dict(evt)
             res["tracks"] = [dict(t) for t in tracks]
+            is_open, closed_reason, deadline_dt = EventService.check_registration_open(res)
+            res["is_registration_open"] = is_open
+            res["registration_closed_reason"] = closed_reason
             return res
 
     @staticmethod
@@ -53,6 +87,9 @@ class EventService:
                 # fetch tracks for event
                 trk_stmt = select(tracks_table).where(tracks_table.c.event_id == r["id"])
                 ev_dict["tracks"] = [dict(t) for t in conn.execute(trk_stmt).mappings().fetchall()]
+                is_open, closed_reason, deadline_dt = EventService.check_registration_open(ev_dict)
+                ev_dict["is_registration_open"] = is_open
+                ev_dict["registration_closed_reason"] = closed_reason
                 result.append(ev_dict)
             return result
 
@@ -124,18 +161,32 @@ class EventService:
             )
             conn.execute(stmt)
         return {"id": data.id, "event_id": event_id, "name": data.name}
+
     @staticmethod
     def register_user(
         event_id_or_slug: str,
         user_id: str,
+        user_role: Optional[str] = None,
         email: Optional[str] = None,
         name: Optional[str] = None,
         team_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        # Rule 1: Only participant role can register for hackathons
+        if user_role and user_role != "participant":
+            raise ForbiddenException(
+                f"Only participants can register for hackathons. You are signed in as '{user_role}'. "
+                "Organizers and judges cannot participate as competitors."
+            )
+
         evt = EventService.get_event(event_id_or_slug)
         if not evt:
             raise NotFoundException(f"Event '{event_id_or_slug}' not found")
         event_id = evt["id"]
+
+        # Rule 2: Registration deadline check
+        is_open, closed_reason, deadline_dt = EventService.check_registration_open(evt)
+        if not is_open:
+            raise ForbiddenException(f"Registration is closed for this event. {closed_reason}")
 
         with engine.begin() as conn:
             check_stmt = select(event_registrations_table).where(
@@ -150,6 +201,9 @@ class EventService:
                     "user_id": user_id,
                     "registration": dict(existing),
                     "participant_count": evt.get("participant_count", 0),
+                    "is_registration_open": is_open,
+                    "registration_deadline": deadline_dt,
+                    "registration_closed_reason": closed_reason,
                     "message": "User is already registered for this event",
                 }
 
@@ -192,6 +246,9 @@ class EventService:
             "user_id": user_id,
             "registration": dict(reg_row) if reg_row else None,
             "participant_count": new_count,
+            "is_registration_open": is_open,
+            "registration_deadline": deadline_dt,
+            "registration_closed_reason": closed_reason,
             "message": "Successfully registered for event",
         }
 
@@ -263,6 +320,7 @@ class EventService:
             raise NotFoundException(f"Event '{event_id_or_slug}' not found")
         event_id = evt["id"]
         count = evt.get("participant_count", 0)
+        is_open, closed_reason, deadline_dt = EventService.check_registration_open(evt)
 
         if not user_id:
             return {
@@ -271,6 +329,9 @@ class EventService:
                 "user_id": None,
                 "registration": None,
                 "participant_count": count,
+                "is_registration_open": is_open,
+                "registration_deadline": deadline_dt,
+                "registration_closed_reason": closed_reason,
             }
 
         with engine.connect() as conn:
@@ -285,6 +346,9 @@ class EventService:
                 "user_id": user_id,
                 "registration": dict(reg) if reg else None,
                 "participant_count": count,
+                "is_registration_open": is_open,
+                "registration_deadline": deadline_dt,
+                "registration_closed_reason": closed_reason,
             }
 
     @staticmethod

@@ -8,7 +8,7 @@ from app.services.event_service import EventService
 from app.services.project_service import ProjectService
 from app.services.email_service import EmailService
 from app.api.deps import require_organizer, require_auth, get_current_user, UserSession
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, ForbiddenException
 
 router = APIRouter(prefix="/events", tags=["Events & Hackathons"])
 
@@ -79,11 +79,18 @@ def register_for_event(
     payload: Optional[RegistrationCreate] = None,
     user: UserSession = Depends(require_auth),
 ):
-    """Register the current authenticated user for a hackathon."""
+    """Register the current authenticated user for a hackathon. Only participants can register."""
+    if user.role != "participant":
+        raise ForbiddenException(
+            f"Only participants can register for hackathons. You are signed in as '{user.role}'. "
+            "Organizers and judges cannot participate as competitors."
+        )
+
     team_id = payload.team_id if payload else None
     return EventService.register_user(
         event_id_or_slug=event_id_or_slug,
         user_id=user.user_id,
+        user_role=user.role,
         email=user.email,
         team_id=team_id,
     )
@@ -112,6 +119,15 @@ def list_event_registrations(
 ):
     """List all registered participants for an event (organizers only)."""
     return EventService.list_event_registrations(event_id_or_slug)
+
+@router.delete("/{event_id_or_slug}/registrations/{participant_user_id}", response_model=RegistrationStatusOut)
+def remove_participant_registration(
+    event_id_or_slug: str,
+    participant_user_id: str,
+    user: UserSession = Depends(require_organizer),
+):
+    """Remove a participant's registration from an event (organizers only)."""
+    return EventService.unregister_user(event_id_or_slug=event_id_or_slug, user_id=participant_user_id)
 
 @router.get("/{event_id_or_slug}/my-submission", response_model=Optional[ProjectOut])
 def get_my_event_submission(

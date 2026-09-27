@@ -31,10 +31,10 @@ class JudgingService:
                 id=data.id,
                 name=data.name,
                 email=data.email,
-                tracks=data.tracks,
+                tracks=data.tracks or [],
             )
             conn.execute(stmt)
-            return JudgingService.get_judge(data.id)
+        return JudgingService.get_judge(data.id)
 
     @staticmethod
     def update_judge(judge_id: str, data: JudgeUpdate):
@@ -44,7 +44,7 @@ class JudgingService:
         with engine.begin() as conn:
             stmt = update(judges_table).where(judges_table.c.id == judge_id).values(**values)
             conn.execute(stmt)
-            return JudgingService.get_judge(judge_id)
+        return JudgingService.get_judge(judge_id)
 
     @staticmethod
     def delete_judge(judge_id: str) -> bool:

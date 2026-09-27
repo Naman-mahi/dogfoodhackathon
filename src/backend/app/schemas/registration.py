@@ -21,4 +21,7 @@ class RegistrationStatusOut(BaseModel):
     user_id: Optional[str] = None
     registration: Optional[RegistrationOut] = None
     participant_count: int
+    is_registration_open: bool = True
+    registration_deadline: Optional[datetime] = None
+    registration_closed_reason: Optional[str] = None
     message: Optional[str] = None

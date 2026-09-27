@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { HACKATHONS_DATA } from "@/lib/mockData";
-import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, Hackathon } from "@/lib/api";
+import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, isEventRegistrationOpen, Hackathon } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 
 export default function HackathonsPage() {
@@ -58,7 +58,23 @@ export default function HackathonsPage() {
       return;
     }
 
+    // Role verification: Only participants can register for hackathons
+    if (user.role && user.role !== "participant") {
+      toast.error(`Only participants can register for hackathons. You are signed in as an '${user.role}'.`);
+      return;
+    }
+
     const isReg = registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug);
+
+    // Registration deadline check
+    if (!isReg) {
+      const regState = isEventRegistrationOpen(h);
+      if (!regState.isOpen) {
+        toast.error(`Registration for "${h.title}" is closed. ${regState.reason || ""}`);
+        return;
+      }
+    }
+
     setRegisteringId(h.id);
 
     try {
@@ -357,100 +373,131 @@ export default function HackathonsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredHackathons.map((h) => (
-                <div
-                  key={h.id}
-                  className="card-modern overflow-hidden flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Banner Area */}
-                    <div className={`h-36 bg-gradient-to-tr ${h.gradient} relative p-4 flex flex-col justify-between text-white`}>
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`badge-pill ${
-                            h.status === "live"
-                              ? "bg-emerald-500 text-white"
-                              : h.status === "upcoming"
-                              ? "bg-blue-500 text-white"
-                              : "bg-slate-700/80 text-slate-300"
-                          }`}
-                        >
-                          {h.status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
-                          {h.status === "live" ? "Live Now" : h.status === "upcoming" ? "Registration Open" : "Completed"}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-[10px] font-medium text-white/90">
-                          {h.format.toUpperCase()}
-                        </span>
+              {filteredHackathons.map((h) => {
+                const regState = isEventRegistrationOpen(h);
+                const isReg = registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug);
+                const formattedRegDeadline = regState.deadline
+                  ? regState.deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : h.deadlineDisplay;
+
+                return (
+                  <div
+                    key={h.id}
+                    className="card-modern overflow-hidden flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Banner Area */}
+                      <div className={`h-36 bg-gradient-to-tr ${h.gradient} relative p-4 flex flex-col justify-between text-white`}>
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`badge-pill ${
+                              !regState.isOpen
+                                ? "bg-rose-600/90 text-white"
+                                : h.status === "live"
+                                ? "bg-emerald-500 text-white"
+                                : h.status === "upcoming"
+                                ? "bg-blue-500 text-white"
+                                : "bg-slate-700/80 text-slate-300"
+                            }`}
+                          >
+                            {!regState.isOpen ? (
+                              "Registration Closed"
+                            ) : (
+                              <>
+                                {h.status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
+                                {h.status === "live" ? "Live Now" : "Registration Open"}
+                              </>
+                            )}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-[10px] font-medium text-white/90">
+                            {h.format.toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="bg-black/30 backdrop-blur-xs px-2.5 py-1 rounded-lg">
+                            {h.deadlineDisplay}
+                          </span>
+                          {!regState.isOpen && (
+                            <span className="bg-rose-950/70 text-rose-200 border border-rose-500/30 px-2 py-0.5 rounded text-[10px]">
+                              Closed
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="text-xs font-mono bg-black/30 backdrop-blur-xs px-2.5 py-1 rounded-lg w-fit">
-                        {h.deadlineDisplay}
+                      {/* Card Content */}
+                      <div className="p-6 space-y-3">
+                        <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">
+                          {h.categoryLabel}
+                        </span>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                          {h.title}
+                        </h3>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          {h.tagline}
+                        </p>
+
+                        <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 border-t border-slate-100">
+                          <div>
+                            <span className="text-slate-400 block">Prize Pool</span>
+                            <span className="font-bold text-slate-800">{h.prizeDisplay}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Entry</span>
+                            <span className="font-semibold text-emerald-600">{h.entryFeeDisplay}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Registration</span>
+                            <span className={`font-semibold ${regState.isOpen ? "text-emerald-600" : "text-rose-600"}`}>
+                              {regState.isOpen ? "Open" : "Closed"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Last Date</span>
+                            <span className="font-medium text-slate-700 truncate block" title={formattedRegDeadline}>
+                              {formattedRegDeadline}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Card Content */}
-                    <div className="p-6 space-y-3">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">
-                        {h.categoryLabel}
-                      </span>
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                        {h.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                        {h.tagline}
-                      </p>
-
-                      <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 border-t border-slate-100">
-                        <div>
-                          <span className="text-slate-400 block">Prize Pool</span>
-                          <span className="font-bold text-slate-800">{h.prizeDisplay}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Entry</span>
-                          <span className="font-semibold text-emerald-600">{h.entryFeeDisplay}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Timezone</span>
-                          <span className="font-medium text-slate-700">{h.timezone}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Participants</span>
-                          <span className="font-medium text-slate-700">{h.participantCount.toLocaleString()}</span>
-                        </div>
-                      </div>
+                    {/* Card Action */}
+                    <div className="p-6 pt-0 flex gap-2">
+                      <Link
+                        href={`/events?slug=${h.slug}`}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+                      >
+                        Details
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={registeringId === h.id || (!isReg && !regState.isOpen)}
+                        onClick={() => handleToggleRegister(h)}
+                        className={`text-xs px-3.5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          isReg
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+                            : !regState.isOpen
+                            ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                        } ${registeringId === h.id ? "opacity-60 cursor-wait" : ""}`}
+                      >
+                        {registeringId === h.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : isReg ? (
+                          "Registered ✓"
+                        ) : !regState.isOpen ? (
+                          "Closed"
+                        ) : (
+                          "Register"
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  {/* Card Action */}
-                  <div className="p-6 pt-0 flex gap-2">
-                    <Link
-                      href={`/events?slug=${h.slug}`}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
-                    >
-                      Details
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                    <button
-                      type="button"
-                      disabled={registeringId === h.id}
-                      onClick={() => handleToggleRegister(h)}
-                      className={`text-xs px-3.5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug)
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
-                          : "bg-purple-600 hover:bg-purple-700 text-white"
-                      } ${registeringId === h.id ? "opacity-60 cursor-wait" : ""}`}
-                    >
-                      {registeringId === h.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug) ? (
-                        "Registered ✓"
-                      ) : (
-                        "Register"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </main>

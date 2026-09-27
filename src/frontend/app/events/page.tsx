@@ -23,8 +23,26 @@ import {
   Mail,
   Loader2,
   Code2,
+  Settings,
+  Edit3,
+  X,
+  Layers,
+  BarChart3,
+  Sparkles,
 } from "lucide-react";
-import { HACKATHONS_DATA } from "@/lib/mockData";
+import { HACKATHONS_DATA, Project } from "@/lib/mockData";
+import DataTable, { ColumnDef } from "@/components/DataTable";
+import {
+  fetchEvents,
+  fetchRegistrationStatus,
+  fetchEventRegistrations,
+  removeParticipantRegistration,
+  fetchJudges,
+  updateJudge,
+  fetchProjects,
+  JudgeData,
+  RegistrationItem,
+} from "@/lib/api";
 import toast from "react-hot-toast";
 
 function EventsContent() {
@@ -51,22 +69,398 @@ function EventsContent() {
 
   const [isRegistered, setIsRegistered] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    import("@/lib/api").then(({ fetchEvents, fetchRegistrationStatus }) => {
-      fetchEvents().then((events) => {
-        const found = events.find(
-          (h) => h.slug === eventIdentifier || h.id === eventIdentifier
-        );
-        if (found) {
-          setHackathon(found);
-          fetchRegistrationStatus(found.id).then((st) => {
-            setIsRegistered(st.registered);
-          });
-        }
+    import("@/lib/auth").then(({ getStoredUser, fetchCurrentUser }) => {
+      const stored = getStoredUser();
+      if (stored) setCurrentUser(stored);
+      fetchCurrentUser().then((u) => {
+        if (u) setCurrentUser(u);
       });
     });
+  }, []);
+
+  useEffect(() => {
+    fetchEvents().then((events) => {
+      const found = events.find(
+        (h) => h.slug === eventIdentifier || h.id === eventIdentifier
+      );
+      if (found) {
+        setHackathon(found);
+        fetchRegistrationStatus(found.id).then((st) => {
+          setIsRegistered(st.registered);
+        });
+      }
+    });
   }, [eventIdentifier]);
+
+  // ── Hackathon Management State & Data (Inside Event) ──
+  const [manageSubTab, setManageSubTab] = useState<"participants" | "judges" | "submissions" | "overview">("participants");
+  const [eventRegistrations, setEventRegistrations] = useState<RegistrationItem[]>([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [hackathonJudges, setHackathonJudges] = useState<JudgeData[]>([]);
+  const [judgesLoading, setJudgesLoading] = useState(false);
+  const [eventProjects, setEventProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [deleteRegConfirm, setDeleteRegConfirm] = useState<string | null>(null);
+
+  // Sync registrations, judges, and projects when manage tab is opened or event changes
+  useEffect(() => {
+    if (activeTab === "manage" && (hackathon?.id || hackathon?.slug)) {
+      const eventKey = hackathon.id || hackathon.slug;
+      setRegistrationsLoading(true);
+      fetchEventRegistrations(eventKey).then((regs) => {
+        setEventRegistrations(regs);
+        setRegistrationsLoading(false);
+      });
+
+      setJudgesLoading(true);
+      fetchJudges().then((jdgs) => {
+        setHackathonJudges(jdgs);
+        setJudgesLoading(false);
+      });
+
+      setProjectsLoading(true);
+      fetchProjects({ hackathon: hackathon.slug || hackathon.id }).then((projs) => {
+        const filtered = projs.filter(
+          (p) =>
+            p.hackathonSlug === hackathon.slug ||
+            p.hackathonId === hackathon.id ||
+            p.hackathonId === hackathon.slug
+        );
+        setEventProjects(filtered.length > 0 ? filtered : projs);
+        setProjectsLoading(false);
+      });
+    }
+  }, [activeTab, hackathon.id, hackathon.slug]);
+
+  // Remove participant handler
+  const handleRemoveParticipant = async (userId: string) => {
+    try {
+      const res = await removeParticipantRegistration(hackathon.id || hackathon.slug, userId);
+      if (res.success) {
+        toast.success("Participant removed from this hackathon.");
+        setEventRegistrations((prev) => prev.filter((r) => r.user_id !== userId));
+        setHackathon((prev) => ({
+          ...prev,
+          participantCount: Math.max(0, prev.participantCount - 1),
+        }));
+      } else {
+        toast.error(res.error || "Failed to remove participant.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove participant.");
+    } finally {
+      setDeleteRegConfirm(null);
+    }
+  };
+
+  // Toggle judge track handler
+  const handleToggleJudgeTrack = async (judge: JudgeData, trackName: string) => {
+    const hasTrack = (judge.tracks || []).includes(trackName);
+    const updatedTracks = hasTrack
+      ? (judge.tracks || []).filter((t) => t !== trackName)
+      : [...(judge.tracks || []), trackName];
+
+    try {
+      const res = await updateJudge(judge.id, { tracks: updatedTracks });
+      if (res.success && res.judge) {
+        setHackathonJudges((prev) =>
+          prev.map((j) => (j.id === judge.id ? res.judge! : j))
+        );
+        toast.success(
+          hasTrack
+            ? `Removed ${judge.name} from track "${trackName}"`
+            : `Assigned ${judge.name} to track "${trackName}"`
+        );
+      } else {
+        toast.error(res.error || "Failed to update judge tracks.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error updating judge.");
+    }
+  };
+
+  // Participant DataTable columns
+  const participantColumns: ColumnDef<RegistrationItem>[] = [
+    {
+      key: "user_name",
+      header: "Participant",
+      sortable: true,
+      render: (r) => (
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-xs">
+            {(r.user_name || r.user_email || "U")[0].toUpperCase()}
+          </span>
+          <div>
+            <div className="font-bold text-slate-900 text-xs sm:text-sm">
+              {r.user_name || r.user_email?.split("@")[0] || "Competitor"}
+            </div>
+            <div className="font-mono text-[10px] text-slate-400">{r.user_id}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "user_email",
+      header: "Email Address",
+      sortable: true,
+      render: (r) => <span className="font-mono text-xs text-slate-600">{r.user_email || "N/A"}</span>,
+    },
+    {
+      key: "team_id",
+      header: "Squad / Team",
+      sortable: true,
+      render: (r) => (
+        <span className="text-xs font-medium text-slate-700">
+          {r.team_id ? (
+            <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono text-[11px]">
+              {r.team_id}
+            </span>
+          ) : (
+            <span className="text-slate-400 italic text-[11px]">Solo Builder</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      sortable: true,
+      render: (r) => (
+        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> {r.status || "confirmed"}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Registration Date",
+      sortable: true,
+      render: (r) => (
+        <span className="text-xs font-mono text-slate-600">
+          {r.created_at ? new Date(r.created_at).toLocaleDateString() : "Active"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (r) => (
+        <div className="flex items-center justify-end">
+          {deleteRegConfirm === r.user_id ? (
+            <div className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleRemoveParticipant(r.user_id)}
+                className="text-[10px] font-bold bg-rose-600 hover:bg-rose-700 text-white px-2 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteRegConfirm(null)}
+                className="text-[10px] font-semibold border border-slate-200 hover:bg-slate-100 text-slate-600 px-1.5 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDeleteRegConfirm(r.user_id)}
+              className="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 transition-colors inline-flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
+              title="Remove participant from hackathon"
+            >
+              <Trash2 className="w-3 h-3" /> Remove
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  // Hackathon Judge DataTable columns
+  const hackathonJudgeColumns: ColumnDef<JudgeData>[] = [
+    {
+      key: "name",
+      header: "Evaluator",
+      sortable: true,
+      render: (j) => (
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-xs">
+            {(j.name || "J")[0].toUpperCase()}
+          </span>
+          <div>
+            <div className="font-bold text-slate-900 text-xs sm:text-sm">{j.name}</div>
+            <div className="font-mono text-[10px] text-slate-400">{j.id}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      header: "Email Address",
+      sortable: true,
+      render: (j) => <span className="font-mono text-xs text-slate-600">{j.email}</span>,
+    },
+    {
+      key: "event_tracks",
+      header: `Assigned Tracks (${hackathon.title})`,
+      render: (j) => {
+        const eventTrackNames = hackathon.tracks?.map((t) => t.name) || [];
+        const matching = (j.tracks || []).filter((t) => eventTrackNames.includes(t));
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {matching.length > 0 ? (
+              matching.map((t) => (
+                <span
+                  key={t}
+                  className="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-lg flex items-center gap-1"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleJudgeTrack(j, t)}
+                    className="hover:text-rose-600 transition-colors cursor-pointer"
+                    title={`Unassign ${j.name} from ${t}`}
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span className="text-[10px] text-slate-400 italic">No tracks in this event</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Assign Track",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (j) => {
+        const eventTrackNames = hackathon.tracks?.map((t) => t.name) || [];
+        const unassigned = eventTrackNames.filter((t) => !j.tracks?.includes(t));
+        if (unassigned.length === 0) {
+          return (
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Fully Covered
+            </span>
+          );
+        }
+        return (
+          <div className="flex items-center justify-end">
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleToggleJudgeTrack(j, e.target.value);
+                  e.target.value = "";
+                }
+              }}
+              className="text-[11px] py-1 px-2 rounded-lg border border-slate-200 bg-white text-slate-700 font-medium cursor-pointer"
+            >
+              <option value="" disabled>+ Assign to Track...</option>
+              {unassigned.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+        );
+      },
+    },
+  ];
+
+  // Submission DataTable columns
+  const submissionColumns: ColumnDef<Project>[] = [
+    {
+      key: "title",
+      header: "Project Submission",
+      sortable: true,
+      render: (p) => (
+        <div className="space-y-1">
+          <div className="font-bold text-slate-900 text-xs sm:text-sm">{p.title}</div>
+          <div className="text-xs text-slate-500 line-clamp-1">{p.summary}</div>
+        </div>
+      ),
+    },
+    {
+      key: "track",
+      header: "Track",
+      sortable: true,
+      render: (p) => (
+        <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-lg">
+          {p.trackLabel || p.track}
+        </span>
+      ),
+    },
+    {
+      key: "team",
+      header: "Team / Squad",
+      sortable: true,
+      render: (p) => <span className="text-xs font-medium text-slate-700">{p.team}</span>,
+    },
+    {
+      key: "technologies",
+      header: "Tech Stack",
+      render: (p) => (
+        <div className="flex flex-wrap gap-1 max-w-[240px]">
+          {p.technologies?.slice(0, 3).map((tech) => (
+            <span key={tech} className="text-[9px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+              {tech}
+            </span>
+          ))}
+          {(p.technologies?.length || 0) > 3 && (
+            <span className="text-[9px] font-mono text-slate-400">+{p.technologies.length - 3}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Links & Review",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (p) => (
+        <div className="flex items-center justify-end gap-2">
+          {p.repoUrl && (
+            <a
+              href={p.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
+              title="Repository"
+            >
+              <FolderGit2 className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {p.demoUrl && (
+            <a
+              href={p.demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
+              title="Live Demo"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+          <Link
+            href={`/projects/${p.slug}`}
+            className="text-xs py-1 px-2.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+          >
+            Review
+          </Link>
+        </div>
+      ),
+    },
+  ];
 
   const handleToggleRegister = async () => {
     const { getStoredUser } = await import("@/lib/auth");
@@ -77,8 +471,24 @@ function EventsContent() {
       return;
     }
 
+    // Role check: Only participants can register
+    if (user.role && user.role !== "participant") {
+      toast.error(`Only participants can register for hackathons. You are signed in as an '${user.role}'.`);
+      return;
+    }
+
+    const { registerForEvent, unregisterFromEvent, isEventRegistrationOpen } = await import("@/lib/api");
+
+    // Registration deadline check
+    if (!isRegistered) {
+      const regStatus = isEventRegistrationOpen(hackathon);
+      if (!regStatus.isOpen) {
+        toast.error(`Registration for "${hackathon.title}" has closed. ${regStatus.reason || ""}`);
+        return;
+      }
+    }
+
     setRegistering(true);
-    const { registerForEvent, unregisterFromEvent } = await import("@/lib/api");
     try {
       if (isRegistered) {
         const res = await unregisterFromEvent(hackathon.id);
@@ -118,9 +528,24 @@ function EventsContent() {
     router.push(`/events?slug=${slug}&tab=${tabId}`);
   };
 
-  // Timeline deadline check
+  // Timeline and Registration deadline checks
+  const formattedStartDate = new Date(hackathon.startDate).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric", year: "numeric" }
+  );
+  const formattedEndDate = new Date(hackathon.endDate).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric", year: "numeric" }
+  );
+
   const deadlineDate = hackathon.submissions_close || hackathon.endDate;
   const isClosed = deadlineDate ? new Date(deadlineDate) <= new Date() : false;
+
+  const regDeadlineDate = hackathon.registration_deadline || hackathon.submissions_close || hackathon.endDate;
+  const isRegClosed = regDeadlineDate ? new Date(regDeadlineDate) <= new Date() : false;
+  const formattedRegDeadline = regDeadlineDate
+    ? new Date(regDeadlineDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : formattedEndDate;
 
   // Project Submission Form State
   const [submissionForm, setSubmissionForm] = useState({
@@ -241,15 +666,6 @@ function EventsContent() {
     }
   };
 
-  const formattedStartDate = new Date(hackathon.startDate).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric", year: "numeric" }
-  );
-  const formattedEndDate = new Date(hackathon.endDate).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric", year: "numeric" }
-  );
-
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "tracks", label: "Tracks & Bounties" },
@@ -259,6 +675,7 @@ function EventsContent() {
     { id: "rules", label: "Rules & Eligibility" },
     { id: "prizes", label: "Prizes & Honors" },
     { id: "faq", label: "FAQ" },
+    { id: "manage", label: "Manage Event" },
   ];
 
   return (
@@ -292,9 +709,20 @@ function EventsContent() {
               {hackathon.categoryLabel}
             </span>
           </div>
-          <span className="text-xs font-mono text-slate-400 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-            slug: {hackathon.slug}
-          </span>
+          <div className="flex items-center gap-2">
+            {currentUser?.role === "organizer" && (
+              <button
+                type="button"
+                onClick={() => handleTabClick("manage")}
+                className="px-3 py-1 rounded-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5" /> Manage Event
+              </button>
+            )}
+            <span className="text-xs font-mono text-slate-400 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+              slug: {hackathon.slug}
+            </span>
+          </div>
         </div>
 
         {/* Clean Main Heading without icons */}
@@ -346,13 +774,13 @@ function EventsContent() {
           <div className="space-y-1">
             <div
               className={`text-xl sm:text-2xl font-black ${
-                isClosed ? "text-rose-400" : "text-emerald-400"
+                isRegClosed ? "text-rose-400" : "text-emerald-400"
               }`}
             >
-              {isClosed ? "Locked" : "Open"}
+              {isRegClosed ? "Closed" : "Open"}
             </div>
             <div className="text-[11px] text-slate-400 uppercase font-semibold">
-              Submission Status
+              Registration ({formattedRegDeadline})
             </div>
           </div>
         </div>
@@ -361,11 +789,13 @@ function EventsContent() {
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <button
             type="button"
-            disabled={registering}
+            disabled={registering || (!isRegistered && isRegClosed)}
             onClick={handleToggleRegister}
             className={`inline-flex items-center gap-2 font-bold text-xs px-6 py-3 rounded-full transition-all ${
               isRegistered
                 ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-400/40"
+                : isRegClosed
+                ? "bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed"
                 : "bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/30"
             }`}
           >
@@ -374,6 +804,10 @@ function EventsContent() {
             ) : isRegistered ? (
               <>
                 <CheckCircle2 className="w-4 h-4" /> Registered Participant ✓
+              </>
+            ) : isRegClosed ? (
+              <>
+                <AlertTriangle className="w-4 h-4 text-rose-400" /> Registration Closed ({formattedRegDeadline})
               </>
             ) : (
               <>
@@ -952,6 +1386,294 @@ function EventsContent() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB 9: MANAGE EVENT (Inside Event Page) */}
+        {activeTab === "manage" && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-mono uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-bold">
+                    {hackathon.categoryLabel || hackathon.category}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">ID: {hackathon.id}</span>
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Manage {hackathon.title}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Control competitor registrations, track judge assignments, submitted builds, and lifecycle deadlines.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/events/new?edit=${hackathon.slug}`}
+                  className="btn-primary text-xs py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 font-bold shadow-xs cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Edit Event Details
+                </Link>
+                <Link
+                  href="/manage-events"
+                  className="btn-secondary text-xs py-2 px-4 text-slate-700 hover:text-black flex items-center gap-1.5 font-bold cursor-pointer"
+                >
+                  All Events Console
+                </Link>
+              </div>
+            </div>
+
+            {/* Sub-tab Navigation */}
+            <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setManageSubTab("participants")}
+                className={`py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  manageSubTab === "participants"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Participants</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                  manageSubTab === "participants" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {eventRegistrations.length || hackathon.participantCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setManageSubTab("judges")}
+                className={`py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  manageSubTab === "judges"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Hackathon Judges</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                  manageSubTab === "judges" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {hackathonJudges.filter((j) =>
+                    j.tracks?.some((t) => hackathon.tracks?.some((ht) => ht.name === t))
+                  ).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setManageSubTab("submissions")}
+                className={`py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  manageSubTab === "submissions"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+                <span>Submissions</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                  manageSubTab === "submissions" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {eventProjects.length || hackathon.submissionCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setManageSubTab("overview")}
+                className={`py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  manageSubTab === "overview"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Deadlines &amp; KPIs</span>
+              </button>
+            </div>
+
+            {/* SUB-TAB 1: PARTICIPANTS / REGISTERED USERS */}
+            {manageSubTab === "participants" && (
+              <div className="space-y-4">
+                <DataTable<RegistrationItem>
+                  data={eventRegistrations}
+                  columns={participantColumns}
+                  title={`Registered Competitors (${eventRegistrations.length})`}
+                  subtitle={`Manage registered users participating in ${hackathon.title}. Only competitors are registered.`}
+                  searchPlaceholder="Search participants by name, email, user ID, or squad..."
+                  searchableKeys={["user_name", "user_email", "user_id", "team_id", "status"]}
+                  pageSize={10}
+                  loading={registrationsLoading}
+                  emptyMessage="No competitors have registered for this hackathon yet."
+                  actions={
+                    <button
+                      type="button"
+                      onClick={() => handleTabClick("teams")}
+                      className="text-xs py-1.5 px-3 rounded-xl border border-purple-200 hover:bg-purple-50 text-purple-700 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5" /> Invite Teammates
+                    </button>
+                  }
+                />
+              </div>
+            )}
+
+            {/* SUB-TAB 2: HACKATHON JUDGES */}
+            {manageSubTab === "judges" && (
+              <div className="space-y-6">
+                {/* Track Coverage Overview Banner */}
+                <div className="card-modern p-5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-purple-700" />
+                      Track Evaluation Coverage
+                    </h3>
+                    <span className="text-[10px] font-mono text-purple-700 bg-purple-200/70 px-2 py-0.5 rounded font-bold">
+                      {hackathon.tracks?.length || 0} Competition Tracks
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {hackathon.tracks?.map((track) => {
+                      const count = hackathonJudges.filter((j) => j.tracks?.includes(track.name)).length;
+                      return (
+                        <div
+                          key={track.name}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                            count > 0
+                              ? "bg-white border-purple-200 text-purple-900 shadow-2xs"
+                              : "bg-amber-50 border-amber-200 text-amber-900"
+                          }`}
+                        >
+                          <span className="font-bold">{track.name}</span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                              count > 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-200 text-amber-800"
+                            }`}
+                          >
+                            {count} judge{count !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Hackathon Judges DataTable */}
+                <DataTable<JudgeData>
+                  data={hackathonJudges}
+                  columns={hackathonJudgeColumns}
+                  title="Hackathon Judges & Track Assignments"
+                  subtitle={`Assign or remove evaluator track specializations specifically for ${hackathon.title}.`}
+                  searchPlaceholder="Search judges by name, email, or track..."
+                  searchableKeys={["name", "email", "id", "tracks"]}
+                  pageSize={10}
+                  loading={judgesLoading}
+                  emptyMessage="No judges available in the roster. Add platform judges in the Judges Console."
+                  actions={
+                    <Link
+                      href="/manage-judges"
+                      className="text-xs py-1.5 px-3 rounded-xl border border-purple-200 hover:bg-purple-50 text-purple-700 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Invite Evaluator
+                    </Link>
+                  }
+                />
+              </div>
+            )}
+
+            {/* SUB-TAB 3: SUBMISSIONS */}
+            {manageSubTab === "submissions" && (
+              <div className="space-y-4">
+                <DataTable<Project>
+                  data={eventProjects}
+                  columns={submissionColumns}
+                  title={`Project Submissions (${eventProjects.length})`}
+                  subtitle={`Review projects, repository sources, and live deployments submitted to ${hackathon.title}.`}
+                  searchPlaceholder="Search projects by title, summary, track, or tech..."
+                  searchableKeys={["title", "summary", "track", "trackLabel", "team", "technologies"]}
+                  pageSize={10}
+                  loading={projectsLoading}
+                  emptyMessage="No projects submitted for this hackathon yet."
+                  actions={
+                    <button
+                      type="button"
+                      onClick={() => handleTabClick("submit")}
+                      className="text-xs py-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" /> Submit Project
+                    </button>
+                  }
+                />
+              </div>
+            )}
+
+            {/* SUB-TAB 4: DEADLINES & OVERVIEW */}
+            {manageSubTab === "overview" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="card-modern p-5 bg-white border border-slate-200 space-y-2">
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Registration Window</div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block w-2.5 h-2.5 rounded-full ${isRegClosed ? "bg-rose-500" : "bg-emerald-500"}`} />
+                      <span className="text-base font-bold text-slate-900">{isRegClosed ? "Registration Closed" : "Registration Open"}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Last date to register: <strong className="text-slate-800">{formattedRegDeadline}</strong>
+                    </p>
+                  </div>
+
+                  <div className="card-modern p-5 bg-white border border-slate-200 space-y-2">
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Total Entries</div>
+                    <div className="text-2xl font-black text-slate-900">{eventRegistrations.length || hackathon.participantCount} Participants</div>
+                    <p className="text-xs text-slate-500">{eventProjects.length || hackathon.submissionCount} projects submitted</p>
+                  </div>
+
+                  <div className="card-modern p-5 bg-white border border-slate-200 space-y-2">
+                    <div className="text-[10px] uppercase font-bold text-slate-400">Tracks &amp; Bounties</div>
+                    <div className="text-2xl font-black text-slate-900">{hackathon.tracks?.length || 0} Tracks</div>
+                    <button
+                      type="button"
+                      onClick={() => setManageSubTab("judges")}
+                      className="text-xs text-purple-600 hover:text-purple-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      Configure Track Judges &rarr;
+                    </button>
+                  </div>
+                </div>
+
+                <div className="card-modern p-6 bg-slate-50 border border-slate-200 space-y-4">
+                  <h3 className="text-sm font-bold text-slate-900">Direct Navigation &amp; Actions</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Link
+                      href="/manage-events"
+                      className="p-4 rounded-xl bg-white border border-slate-200 hover:border-purple-300 transition-all block space-y-1"
+                    >
+                      <div className="text-xs font-bold text-slate-900">Manage Events Roster</div>
+                      <div className="text-[11px] text-slate-500">View and manage all platform hackathons</div>
+                    </Link>
+                    <Link
+                      href="/manage-judges"
+                      className="p-4 rounded-xl bg-white border border-slate-200 hover:border-purple-300 transition-all block space-y-1"
+                    >
+                      <div className="text-xs font-bold text-slate-900">Manage Judges Roster</div>
+                      <div className="text-[11px] text-slate-500">Invite, configure, and inspect evaluators</div>
+                    </Link>
+                    <Link
+                      href="/hackathon-judges"
+                      className="p-4 rounded-xl bg-white border border-slate-200 hover:border-purple-300 transition-all block space-y-1"
+                    >
+                      <div className="text-xs font-bold text-slate-900">Hackathon Judges Matrix</div>
+                      <div className="text-[11px] text-slate-500">Assign judges to specific track categories</div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

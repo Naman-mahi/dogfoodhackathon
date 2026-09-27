@@ -70,6 +70,7 @@ class EventBase(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     submissions_close: datetime
+    registration_deadline: Optional[datetime] = None
     timezone: str = "UTC"
     is_free: bool = True
     entry_fee_display: str = "Free"
@@ -108,6 +109,7 @@ class EventUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     submissions_close: Optional[datetime] = None
+    registration_deadline: Optional[datetime] = None
     timezone: Optional[str] = None
     is_free: Optional[bool] = None
     entry_fee_display: Optional[str] = None
@@ -128,4 +130,6 @@ class EventUpdate(BaseModel):
 class EventOut(EventBase):
     id: str
     tracks: Optional[List[TrackOut]] = []
+    is_registration_open: Optional[bool] = True
+    registration_closed_reason: Optional[str] = None
     created_at: Optional[datetime] = None

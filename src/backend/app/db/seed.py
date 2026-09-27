@@ -79,6 +79,7 @@ def seed_database():
                     start_date=parse_iso(h.get("start_date")),
                     end_date=parse_iso(h.get("end_date")),
                     submissions_close=parse_iso(h.get("submissions_close")),
+                    registration_deadline=parse_iso(h.get("registration_deadline")) if h.get("registration_deadline") else None,
                     timezone=h.get("timezone", "UTC"),
                     is_free=h.get("is_free", True),
                     entry_fee_display=h.get("entry_fee_display", "Free Entry"),

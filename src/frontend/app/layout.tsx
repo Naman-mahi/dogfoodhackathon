@@ -16,11 +16,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
+      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased">
         <ToastProvider />
         {/* Navbar is handled per-layout for dashboard/events routes */}
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 bg-slate-50">{children}</main>
         {/* Footer hides itself for organizer/judge via role check */}
         <Footer />
       </body>

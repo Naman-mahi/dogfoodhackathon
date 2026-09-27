@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Award,
   ShieldCheck,
@@ -8,9 +9,13 @@ import {
   Lock,
   AlertCircle,
   BookOpen,
+  Check,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { AuthUser } from "../../lib/auth";
 import DashboardSidebar, { JUDGE_NAV } from "../../components/DashboardSidebar";
+import DataTable, { ColumnDef } from "../../components/DataTable";
 
 interface JudgeDashboardProps {
   user?: AuthUser | null;
@@ -42,6 +47,78 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
     { id: "prj_03", title: "Small Meadow", team: "Greenfield Ops", track: "Developer tools",
       summary: "Ephemeral micro-environment orchestrator for pull request previews.", scored: false, lastScore: null, comment: "" },
   ]);
+
+  const completedProjects = projects.filter((p) => p.scored);
+  const completedCount = completedProjects.length;
+  const pendingCount = projects.filter((p) => !p.scored).length;
+  const avgScore = completedCount > 0
+    ? (completedProjects.reduce((sum, p) => sum + (p.lastScore || 0), 0) / completedCount)
+    : 0;
+  const progressPercent = projects.length > 0 ? Math.round((completedCount / projects.length) * 100) : 0;
+
+  const historyColumns: ColumnDef<any>[] = [
+    {
+      key: "title",
+      header: "Project",
+      sortable: true,
+      render: (p) => (
+        <div className="space-y-0.5">
+          <div className="font-bold text-slate-900 text-xs sm:text-sm">{p.title}</div>
+          <div className="font-mono text-[10px] text-slate-400">{p.id}</div>
+        </div>
+      ),
+    },
+    {
+      key: "team",
+      header: "Team / Squad",
+      sortable: true,
+      render: (p) => <span className="text-xs font-medium text-slate-700">{p.team}</span>,
+    },
+    {
+      key: "track",
+      header: "Track",
+      sortable: true,
+      render: (p) => (
+        <span className="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-lg">
+          {p.track}
+        </span>
+      ),
+    },
+    {
+      key: "lastScore",
+      header: "Calibrated Score",
+      sortable: true,
+      render: (p) => (
+        <span className="font-mono font-bold text-xs text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+          {p.lastScore ? p.lastScore.toFixed(1) : "N/A"} / 10
+        </span>
+      ),
+    },
+    {
+      key: "comment",
+      header: "Evaluator Note",
+      render: (p) => (
+        <span className="text-xs text-slate-600 italic line-clamp-1">
+          &ldquo;{p.comment || "Rubric standards satisfied."}&rdquo;
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (p) => (
+        <button
+          type="button"
+          onClick={() => handleOpenScoreModal(p)}
+          className="text-xs py-1 px-3 rounded-lg border border-blue-200 hover:bg-blue-50 text-blue-700 font-semibold cursor-pointer"
+        >
+          Update Score
+        </button>
+      ),
+    },
+  ];
 
   const handleOpenScoreModal = (prj: any) => {
     setSelectedProject({
@@ -122,7 +199,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] border border-slate-200 rounded-3xl overflow-hidden bg-slate-50/50 shadow-sm">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] bg-slate-50 w-full relative">
       {/* Reusable Sidebar */}
       <DashboardSidebar
         role="judge"
@@ -133,7 +210,34 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
       />
 
       {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-10 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 w-full min-w-0">
+
+        {/* Judge Metric KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card-modern p-5 border-l-4 border-l-purple-500 space-y-1 bg-white">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Assigned Queue</div>
+            <div className="text-2xl font-black text-slate-900">{projects.length} Projects</div>
+            <div className="text-[11px] text-slate-500 font-mono">Track: Developer Tools</div>
+          </div>
+          <div className="card-modern p-5 border-l-4 border-l-emerald-500 space-y-1 bg-white">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Reviews Completed</div>
+            <div className="text-2xl font-black text-emerald-600">{completedCount} Evaluated</div>
+            <div className="text-[11px] text-slate-500">{progressPercent}% of queue reviewed</div>
+          </div>
+          <div className="card-modern p-5 border-l-4 border-l-amber-500 space-y-1 bg-white">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Pending Reviews</div>
+            <div className="text-2xl font-black text-amber-600">{pendingCount} Projects</div>
+            <div className="text-[11px] text-slate-500">Requires rubric scores</div>
+          </div>
+          <div className="card-modern p-5 border-l-4 border-l-blue-500 space-y-1 bg-white">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Peer Isolation</div>
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <span className="text-lg font-bold text-slate-900">Enforced</span>
+            </div>
+            <div className="text-[11px] text-slate-500">HTTP 403 Cross-Judge Guard</div>
+          </div>
+        </div>
 
         {/* ── ASSIGNED QUEUE TAB ── */}
         {activeTab === "queue" && (
@@ -224,28 +328,16 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Submitted Evaluations</h1>
               <p className="text-xs text-slate-500">Audit record of scores recorded during your active review session.</p>
             </div>
-            <div className="card-modern overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-mono text-[10px]">
-                  <tr>
-                    <th className="py-3 px-4">Project</th>
-                    <th className="py-3 px-4">Team</th>
-                    <th className="py-3 px-4">Average Score</th>
-                    <th className="py-3 px-4">Feedback Note</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {projects.filter((p) => p.scored).map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-4 font-bold text-slate-900">{p.title}</td>
-                      <td className="py-3 px-4 text-slate-500">{p.team}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-blue-600">{p.lastScore?.toFixed(1)} / 10</td>
-                      <td className="py-3 px-4 text-slate-600 italic">&ldquo;{p.comment || "No comment"}&rdquo;</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={completedProjects}
+              columns={historyColumns}
+              title="Audit Log of Recorded Evaluations"
+              subtitle={`You have evaluated ${completedProjects.length} of ${projects.length} assigned entries.`}
+              searchPlaceholder="Search evaluated projects by title, team, or track..."
+              searchableKeys={["title", "team", "track", "comment", "id"]}
+              pageSize={10}
+              emptyMessage="No evaluations recorded yet. Review projects from the Assigned Queue."
+            />
           </div>
         )}
 

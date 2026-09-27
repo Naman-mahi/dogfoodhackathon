@@ -14,7 +14,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { AuthUser, logoutUser } from "../../lib/auth";
-import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, EventData } from "../../lib/api";
+import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, isEventRegistrationOpen, EventData } from "../../lib/api";
 import toast from "react-hot-toast";
 
 interface ParticipantDashboardProps {
@@ -55,6 +55,22 @@ export default function ParticipantDashboard({ user }: ParticipantDashboardProps
   }, [user]);
 
   const handleRegisterEvent = async (eventId: string) => {
+    // Role verification: Only participants can register for hackathons
+    if (user?.role && user.role !== "participant") {
+      toast.error(`Only participants can register for hackathons. You are signed in as an '${user.role}'.`);
+      return;
+    }
+
+    // Registration deadline check
+    const ev = allEvents.find((e) => e.id === eventId || e.slug === eventId);
+    if (ev) {
+      const regStatus = isEventRegistrationOpen(ev);
+      if (!regStatus.isOpen) {
+        toast.error(`Registration for "${ev.title || ev.name}" has closed. ${regStatus.reason || ""}`);
+        return;
+      }
+    }
+
     setLoadingActionId(eventId);
     try {
       const res = await registerForEvent(eventId);
@@ -323,14 +339,20 @@ export default function ParticipantDashboard({ user }: ParticipantDashboardProps
                   <span className="text-xs font-bold text-emerald-700">
                     {ev.prizeDisplay || "$50,000"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRegisterEvent(ev.id)}
-                    className="btn-primary text-xs py-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 font-bold"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    Register
-                  </button>
+                  {!isEventRegistrationOpen(ev).isOpen ? (
+                    <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded">
+                      Registration Closed
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleRegisterEvent(ev.id)}
+                      className="btn-primary text-xs py-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 font-bold"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      Register
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -31,6 +31,7 @@ import {
   fetchMySubmission,
   submitProject,
   inviteTeammate,
+  isEventRegistrationOpen,
   EventData,
   Project,
 } from "@/lib/api";
@@ -198,6 +199,19 @@ export default function HackathonDetailPage() {
 
   const handleRegisterNow = async () => {
     if (!event) return;
+
+    if (user?.role && user.role !== "participant") {
+      toast.error(`Only participants can register for hackathons. You are signed in as an '${user.role}'.`);
+      return;
+    }
+
+    const { isEventRegistrationOpen } = await import("@/lib/api");
+    const regStatus = isEventRegistrationOpen(event);
+    if (!regStatus.isOpen) {
+      toast.error(`Registration for "${event.title}" has closed. ${regStatus.reason || ""}`);
+      return;
+    }
+
     setRegistering(true);
     try {
       const res = await registerForEvent(event.id);
@@ -281,6 +295,10 @@ export default function HackathonDetailPage() {
               {isRegistered ? (
                 <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                   <CheckCircle2 className="w-2.5 h-2.5" /> Registered Participant ✓
+                </span>
+              ) : !isEventRegistrationOpen(event).isOpen ? (
+                <span className="text-[10px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Clock className="w-2.5 h-2.5" /> Registration Closed
                 </span>
               ) : (
                 <button
