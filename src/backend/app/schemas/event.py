@@ -88,7 +88,7 @@ class EventBase(BaseModel):
     faqs: Optional[List[Dict[str, Any]]] = None
 
 class EventCreate(EventBase):
-    id: str
+    id: Optional[str] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str] = None

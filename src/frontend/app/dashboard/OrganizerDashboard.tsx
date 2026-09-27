@@ -254,13 +254,21 @@ export default function OrganizerDashboard({ user }: OrganizerDashboardProps) {
         {/* LIFECYCLE TAB */}
         {activeTab === "lifecycle" && (
           <div className="space-y-6">
-            <div className="border-b border-slate-200 pb-5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                Event Lifecycle Management
-              </h1>
-              <p className="text-xs text-slate-500">
-                Control the submissions window and automated deadline enforcement (Tier 1 requirement).
-              </p>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-5">
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Event Lifecycle Management
+                </h1>
+                <p className="text-xs text-slate-500">
+                  Control the submissions window and automated deadline enforcement (Tier 1 requirement).
+                </p>
+              </div>
+              <Link
+                href="/events/new"
+                className="btn-primary text-xs py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 shadow-xs font-bold"
+              >
+                + Launch Event Creation Wizard
+              </Link>
             </div>
 
             <div className="card-modern p-6 space-y-4">

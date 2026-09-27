@@ -14,13 +14,34 @@ export default function HackathonsPage() {
   const [selectedPrizeTier, setSelectedPrizeTier] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("soonest");
 
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([
+    "sample-hack-2026",
+    "ai-builder-sprint-2026",
+  ]);
+
   React.useEffect(() => {
     import("@/lib/api").then(({ fetchEvents }) => {
       fetchEvents().then((evs) => {
         if (evs && evs.length > 0) setHackathonsList(evs);
       });
     });
+
+    const saved = localStorage.getItem("dogfood_registered_prt_01");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) setRegisteredEventIds(parsed);
+      } catch {}
+    }
   }, []);
+
+  const handleToggleRegister = (eventId: string) => {
+    const next = registeredEventIds.includes(eventId)
+      ? registeredEventIds.filter((id) => id !== eventId)
+      : [...registeredEventIds, eventId];
+    setRegisteredEventIds(next);
+    localStorage.setItem("dogfood_registered_prt_01", JSON.stringify(next));
+  };
 
   const toggleFilter = (list: string[], setList: (val: string[]) => void, item: string) => {
     if (list.includes(item)) {
@@ -336,14 +357,27 @@ export default function HackathonsPage() {
                   </div>
 
                   {/* Card Action */}
-                  <div className="p-6 pt-0">
+                  <div className="p-6 pt-0 flex gap-2">
                     <Link
                       href={`/events?slug=${h.slug}`}
-                      className="w-full inline-flex items-center justify-center gap-1.5 text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
                     >
-                      View Event Details
-                      <ArrowRight className="w-4 h-4" />
+                      Details
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleRegister(h.id)}
+                      className={`text-xs px-3.5 py-2.5 rounded-xl font-bold transition-all ${
+                        registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug)
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-purple-600 hover:bg-purple-700 text-white"
+                      }`}
+                    >
+                      {registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug)
+                        ? "Registered ✓"
+                        : "Register"}
+                    </button>
                   </div>
                 </div>
               ))}
