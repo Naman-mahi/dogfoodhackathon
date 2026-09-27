@@ -33,8 +33,9 @@ RUN cd /app/frontend && npm install --include=dev
 COPY src/frontend /app/frontend/
 RUN cd /app/frontend && npm run build
 
-# 3. Copy Shared Fixtures
+# 3. Copy Shared Fixtures and Root Environment
 COPY fixtures.json /app/fixtures.json
+COPY .env* /app/
 
 # 4. Copy Entrypoint Script
 COPY entrypoint.sh /app/entrypoint.sh

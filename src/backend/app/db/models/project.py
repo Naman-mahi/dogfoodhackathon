@@ -10,6 +10,7 @@ projects_table = Table(
     Column("hackathon_id", String(64), nullable=True),
     Column("hackathon_slug", String(128), nullable=True),
     Column("team", String(64), nullable=False),
+    Column("user_id", String(64), index=True, nullable=True),
     Column("track", String(64), nullable=False),
     Column("track_label", String(128), nullable=True),
     Column("title", String(255), nullable=False),

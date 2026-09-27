@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Search, ArrowRight, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { HACKATHONS_DATA } from "@/lib/mockData";
+import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, Hackathon } from "@/lib/api";
+import { getStoredUser } from "@/lib/auth";
 
 export default function HackathonsPage() {
-  const [hackathonsList, setHackathonsList] = useState(HACKATHONS_DATA);
+  const router = useRouter();
+  const [hackathonsList, setHackathonsList] = useState<Hackathon[]>(HACKATHONS_DATA);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -14,33 +19,93 @@ export default function HackathonsPage() {
   const [selectedPrizeTier, setSelectedPrizeTier] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("soonest");
 
-  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([
-    "sample-hack-2026",
-    "ai-builder-sprint-2026",
-  ]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([]);
+  const [registeringId, setRegisteringId] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    import("@/lib/api").then(({ fetchEvents }) => {
-      fetchEvents().then((evs) => {
-        if (evs && evs.length > 0) setHackathonsList(evs);
-      });
+  useEffect(() => {
+    // 1. Fetch live events from backend
+    fetchEvents().then((evs) => {
+      if (evs && evs.length > 0) setHackathonsList(evs);
     });
 
-    const saved = localStorage.getItem("dogfood_registered_prt_01");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) setRegisteredEventIds(parsed);
-      } catch {}
+    // 2. Fetch user's registered events from backend API
+    const user = getStoredUser();
+    if (user) {
+      fetchMyRegistrations().then((myEvs) => {
+        if (myEvs && myEvs.length > 0) {
+          const ids = myEvs.flatMap((e) => [e.id, e.slug]);
+          setRegisteredEventIds(ids);
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(ids));
+        } else {
+          // Check local cache as fallback
+          const saved = localStorage.getItem(`dogfood_registered_${user.user_id}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed)) setRegisteredEventIds(parsed);
+            } catch {}
+          }
+        }
+      });
     }
   }, []);
 
-  const handleToggleRegister = (eventId: string) => {
-    const next = registeredEventIds.includes(eventId)
-      ? registeredEventIds.filter((id) => id !== eventId)
-      : [...registeredEventIds, eventId];
-    setRegisteredEventIds(next);
-    localStorage.setItem("dogfood_registered_prt_01", JSON.stringify(next));
+  const handleToggleRegister = async (h: Hackathon) => {
+    const user = getStoredUser();
+    if (!user) {
+      toast.error("Please sign in to register for hackathons");
+      router.push(`/login?redirect=/hackathons`);
+      return;
+    }
+
+    const isReg = registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug);
+    setRegisteringId(h.id);
+
+    try {
+      if (isReg) {
+        // Unregister
+        const res = await unregisterFromEvent(h.id);
+        if (res.success) {
+          const next = registeredEventIds.filter((id) => id !== h.id && id !== h.slug);
+          setRegisteredEventIds(next);
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(next));
+
+          // Update participant count in place
+          setHackathonsList((prev) =>
+            prev.map((item) =>
+              item.id === h.id || item.slug === h.slug
+                ? { ...item, participantCount: res.participantCount ?? Math.max(0, item.participantCount - 1) }
+                : item
+            )
+          );
+          toast(`Unregistered from ${h.title}`, { icon: "👋" });
+        } else {
+          toast.error(res.error || "Failed to unregister.");
+        }
+      } else {
+        // Register
+        const res = await registerForEvent(h.id);
+        if (res.success) {
+          const next = [...registeredEventIds, h.id, h.slug];
+          setRegisteredEventIds(next);
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(next));
+
+          // Update participant count in place
+          setHackathonsList((prev) =>
+            prev.map((item) =>
+              item.id === h.id || item.slug === h.slug
+                ? { ...item, participantCount: res.participantCount ?? (item.participantCount + 1) }
+                : item
+            )
+          );
+          toast.success(`Successfully registered for ${h.title}! Confirmation email sent ✉️`);
+        } else {
+          toast.error(res.error || "Registration failed.");
+        }
+      }
+    } finally {
+      setRegisteringId(null);
+    }
   };
 
   const toggleFilter = (list: string[], setList: (val: string[]) => void, item: string) => {
@@ -367,16 +432,21 @@ export default function HackathonsPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => handleToggleRegister(h.id)}
-                      className={`text-xs px-3.5 py-2.5 rounded-xl font-bold transition-all ${
+                      disabled={registeringId === h.id}
+                      onClick={() => handleToggleRegister(h)}
+                      className={`text-xs px-3.5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
                         registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug)
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
                           : "bg-purple-600 hover:bg-purple-700 text-white"
-                      }`}
+                      } ${registeringId === h.id ? "opacity-60 cursor-wait" : ""}`}
                     >
-                      {registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug)
-                        ? "Registered ✓"
-                        : "Register"}
+                      {registeringId === h.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : registeredEventIds.includes(h.id) || registeredEventIds.includes(h.slug) ? (
+                        "Registered ✓"
+                      ) : (
+                        "Register"
+                      )}
                     </button>
                   </div>
                 </div>

@@ -140,13 +140,37 @@ pytest -v
 
 ---
 
-## Environment Variables Reference
+## Unified Environment Configuration (.env)
+
+The platform supports a single unified `.env` file at the root of the project that serves both FastAPI and Next.js. See `.env.example` for reference:
+
+```bash
+# Copy template to active .env
+cp .env.example .env
+```
 
 | Variable | Default Value | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://dogfood:dogfood@127.0.0.1:5432/dogfood` | PostgreSQL database connection string |
 | `SECRET_KEY` | `dogfood-super-secret-key-2026` | Secret key used for session cookie signing and certificates |
 | `PORT` | `8080` | External portal listening port |
+| `BACKEND_URL` | `http://127.0.0.1:8000` | Backend API URL for internal proxy rewrites |
 | `NEXT_PUBLIC_API_URL` | `http://127.0.0.1:8000` | Backend API URL for client-side queries |
 | `SHRINKAGE_K` | `2.0` | Empirical Bayes score shrinkage hyperparameter |
 | `ENVIRONMENT` | `production` | Deployment environment (`development` or `production`) |
+| `SMTP_HOST` | `smtp.gmail.com` | SMTP host for email notifications |
+| `SMTP_PORT` | `587` | SMTP port (e.g. 587 for STARTTLS) |
+| `SMTP_USER` | `notifications@dogfood.internal` | SMTP username |
+| `SMTP_PASSWORD` | `app-password` | SMTP password / app password |
+| `SMTP_FROM_EMAIL` | `DOGFOOD Hackathons <no-reply@dogfood.dev>` | From address for notifications |
+| `EMAIL_ENABLED` | `true` | Enable/disable active SMTP delivery (audit logs persist regardless) |
+
+### Notifications & Email Auditing
+Emails are dispatched asynchronously for key user events:
+1. **Hackathon Registration:** Welcome and timeline confirmation email.
+2. **Hackathon Unregistration:** Cancellation confirmation.
+3. **Project Submission:** Complete submission receipt with track, repo, and demo details.
+4. **Teammate Invites:** Teammate invitation emails with instant one-click join links.
+5. **New Hackathons:** Announcement broadcast to registered users.
+
+All sent and simulated emails are audited in the `email_logs` database table and queryable via `GET /api/v1/events/emails/logs`. All frontend alerts use `react-hot-toast` with custom dark-themed styling.

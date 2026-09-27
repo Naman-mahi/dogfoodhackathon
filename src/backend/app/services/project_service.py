@@ -4,8 +4,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select, insert, update, delete, or_
 from app.db.session import engine
 from app.db.models.project import projects_table
+from app.db.models.event import events_table
+from app.db.models.user import users_table, sessions_table
 from app.schemas.project import ProjectCreate, ProjectUpdate
 from app.services.event_service import EventService
+from app.services.email_service import EmailService
 from app.core.exceptions import DeadlineExpiredException
 
 class ProjectService:
@@ -56,12 +59,38 @@ class ProjectService:
             return dict(row) if row else None
 
     @staticmethod
-    def create_project(data: ProjectCreate, submitter_team: Optional[str] = None) -> Dict[str, Any]:
-        event_target = data.hackathon_id or "evt_01"
+    def get_user_event_submission(event_id_or_slug: str, user_id: str) -> Optional[Dict[str, Any]]:
+        evt = EventService.get_event(event_id_or_slug)
+        event_id = evt["id"] if evt else event_id_or_slug
+        event_slug = evt["slug"] if evt else event_id_or_slug
+
+        with engine.connect() as conn:
+            stmt = select(projects_table).where(
+                or_(
+                    projects_table.c.event_id == event_id,
+                    projects_table.c.hackathon_id == event_id,
+                    projects_table.c.hackathon_slug == event_slug,
+                ),
+                or_(
+                    projects_table.c.user_id == user_id,
+                    projects_table.c.team == user_id,
+                ),
+            ).order_by(projects_table.c.submitted_at.desc())
+            row = conn.execute(stmt).mappings().first()
+            return dict(row) if row else None
+
+    @staticmethod
+    def create_project(data: ProjectCreate, submitter_team: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
+        event_target = data.hackathon_id or data.hackathon_slug or "sample-hack-2026"
         if EventService.is_event_closed(event_target):
             raise DeadlineExpiredException(
                 "Submissions closed for this event. Submissions made after the deadline are refused."
             )
+
+        evt = EventService.get_event(event_target)
+        event_id = evt["id"] if evt else "evt_01"
+        hackathon_id = evt["id"] if evt else event_target
+        hackathon_slug = evt["slug"] if evt else event_target
 
         new_id = data.id or f"prj_{int(datetime.now(timezone.utc).timestamp())}"
         slug = data.slug or data.title.lower().replace(" ", "-")
@@ -71,10 +100,11 @@ class ProjectService:
             stmt = insert(projects_table).values(
                 id=new_id,
                 slug=slug,
-                event_id="evt_01",
-                hackathon_id=data.hackathon_id or "sample-hack-2026",
-                hackathon_slug=data.hackathon_slug or "sample-hack-2026",
+                event_id=event_id,
+                hackathon_id=hackathon_id,
+                hackathon_slug=hackathon_slug,
                 team=data.team or submitter_team or "tm_01",
+                user_id=user_id or data.user_id,
                 track=data.track or "trk_01",
                 track_label=data.track_label or "General Track",
                 title=data.title,
@@ -89,7 +119,42 @@ class ProjectService:
                 submitted_at=submitted_at,
             )
             conn.execute(stmt)
-        return ProjectService.get_project(new_id)
+
+            if evt:
+                conn.execute(
+                    update(events_table)
+                    .where(events_table.c.id == event_id)
+                    .values(submission_count=events_table.c.submission_count + 1)
+                )
+
+        proj = ProjectService.get_project(new_id)
+
+        # Dispatch submission confirmation email to submitter
+        try:
+            submitter_email = None
+            if user_id:
+                with engine.connect() as conn:
+                    # check users_table
+                    u_row = conn.execute(select(users_table.c.email).where(users_table.c.id == user_id)).mappings().first()
+                    if u_row:
+                        submitter_email = u_row.get("email")
+                    else:
+                        # check sessions_table
+                        s_row = conn.execute(select(sessions_table.c.user_email).where(sessions_table.c.user_id == user_id)).mappings().first()
+                        if s_row:
+                            submitter_email = s_row.get("user_email")
+
+            if submitter_email and proj:
+                EmailService.send_submission_email(
+                    user_email=submitter_email,
+                    user_name=data.team or submitter_team,
+                    project_data=proj,
+                    event_data=evt or {"title": event_target, "slug": event_target},
+                )
+        except Exception:
+            pass
+
+        return proj
 
     @staticmethod
     def update_project(project_id: str, data: ProjectUpdate) -> Optional[Dict[str, Any]]:

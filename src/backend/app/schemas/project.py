@@ -10,6 +10,7 @@ class ProjectBase(BaseModel):
     track: str = Field("trk_01", description="Track identifier")
     track_label: Optional[str] = Field(None, description="Human readable track name")
     team: str = Field("tm_01", description="Team identifier")
+    user_id: Optional[str] = Field(None, description="User ID of submitter")
     problem: Optional[str] = Field(None, description="Problem statement solved")
     solution: Optional[str] = Field(None, description="Solution & technical architecture")
     technologies: Optional[List[str]] = Field(default=[], description="List of technologies & frameworks")

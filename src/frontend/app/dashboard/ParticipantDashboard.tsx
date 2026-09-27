@@ -14,7 +14,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { AuthUser, logoutUser } from "../../lib/auth";
-import { fetchEvents, EventData } from "../../lib/api";
+import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, EventData } from "../../lib/api";
+import toast from "react-hot-toast";
 
 interface ParticipantDashboardProps {
   user?: AuthUser | null;
@@ -22,38 +23,77 @@ interface ParticipantDashboardProps {
 
 export default function ParticipantDashboard({ user }: ParticipantDashboardProps) {
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
-  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([
-    "sample-hack-2026",
-    "ai-catalyst-sprint",
-  ]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([]);
+  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
   useEffect(() => {
+    // 1. Fetch all events
     fetchEvents().then((evs) => {
       if (evs && evs.length > 0) setAllEvents(evs);
     });
 
-    const key = `dogfood_registered_${user?.user_id || "prt_01"}`;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) setRegisteredEventIds(parsed);
-      } catch { /* use default */ }
-    }
+    // 2. Fetch live registrations for current user
+    fetchMyRegistrations().then((myEvents) => {
+      if (myEvents && myEvents.length > 0) {
+        const ids = myEvents.flatMap((e) => [e.id, e.slug]);
+        setRegisteredEventIds(ids);
+        if (user) {
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(ids));
+        }
+      } else if (user) {
+        // Fallback to local cache
+        const key = `dogfood_registered_${user.user_id}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) setRegisteredEventIds(parsed);
+          } catch {}
+        }
+      }
+    });
   }, [user]);
 
-  const handleRegisterEvent = (eventId: string) => {
-    const next = registeredEventIds.includes(eventId)
-      ? registeredEventIds
-      : [...registeredEventIds, eventId];
-    setRegisteredEventIds(next);
-    localStorage.setItem(`dogfood_registered_${user?.user_id || "prt_01"}`, JSON.stringify(next));
+  const handleRegisterEvent = async (eventId: string) => {
+    setLoadingActionId(eventId);
+    try {
+      const res = await registerForEvent(eventId);
+      if (res.success) {
+        const next = [...registeredEventIds, eventId];
+        setRegisteredEventIds(next);
+        if (user) {
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(next));
+        }
+        toast.success(res.message || "Registered successfully! Confirmation email sent.");
+      } else {
+        toast.error(res.error || "Failed to register for hackathon.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to register.");
+    } finally {
+      setLoadingActionId(null);
+    }
   };
 
-  const handleUnregisterEvent = (eventId: string) => {
-    const next = registeredEventIds.filter((id) => id !== eventId);
-    setRegisteredEventIds(next);
-    localStorage.setItem(`dogfood_registered_${user?.user_id || "prt_01"}`, JSON.stringify(next));
+  const handleUnregisterEvent = async (eventId: string) => {
+    setLoadingActionId(eventId);
+    try {
+      const res = await unregisterFromEvent(eventId);
+      if (res.success) {
+        const next = registeredEventIds.filter((id) => id !== eventId);
+        setRegisteredEventIds(next);
+        if (user) {
+          localStorage.setItem(`dogfood_registered_${user.user_id}`, JSON.stringify(next));
+        }
+        toast.success("Unregistered from hackathon.");
+      } else {
+        toast.error(res.error || "Failed to unregister.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to unregister.");
+    } finally {
+      setLoadingActionId(null);
+    }
   };
 
   const handleLogout = async () => {

@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# Load unified root .env if present
+if [ -f /app/.env ]; then
+  echo "Loading unified root .env configuration..."
+  cp -n /app/.env /app/backend/.env 2>/dev/null || true
+  cp -n /app/.env /app/frontend/.env 2>/dev/null || true
+  set -a
+  source /app/.env
+  set +a
+fi
+
 echo "Starting local PostgreSQL daemon..."
 service postgresql start
 

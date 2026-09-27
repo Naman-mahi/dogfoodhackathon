@@ -25,6 +25,7 @@ import {
   Code2,
 } from "lucide-react";
 import { HACKATHONS_DATA } from "@/lib/mockData";
+import toast from "react-hot-toast";
 
 function EventsContent() {
   const router = useRouter();
@@ -48,16 +49,68 @@ function EventsContent() {
     );
   });
 
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registering, setRegistering] = useState(false);
+
   useEffect(() => {
-    import("@/lib/api").then(({ fetchEvents }) => {
+    import("@/lib/api").then(({ fetchEvents, fetchRegistrationStatus }) => {
       fetchEvents().then((events) => {
         const found = events.find(
           (h) => h.slug === eventIdentifier || h.id === eventIdentifier
         );
-        if (found) setHackathon(found);
+        if (found) {
+          setHackathon(found);
+          fetchRegistrationStatus(found.id).then((st) => {
+            setIsRegistered(st.registered);
+          });
+        }
       });
     });
   }, [eventIdentifier]);
+
+  const handleToggleRegister = async () => {
+    const { getStoredUser } = await import("@/lib/auth");
+    const user = getStoredUser();
+    if (!user) {
+      toast.error("Please sign in to register for hackathons.");
+      router.push(`/login?redirect=/events?slug=${hackathon.slug || eventIdentifier}`);
+      return;
+    }
+
+    setRegistering(true);
+    const { registerForEvent, unregisterFromEvent } = await import("@/lib/api");
+    try {
+      if (isRegistered) {
+        const res = await unregisterFromEvent(hackathon.id);
+        if (res.success) {
+          setIsRegistered(false);
+          setHackathon((prev) => ({
+            ...prev,
+            participantCount: res.participantCount ?? Math.max(0, prev.participantCount - 1),
+          }));
+          toast.success("Unregistered from hackathon.");
+        } else {
+          toast.error(res.error || "Failed to unregister.");
+        }
+      } else {
+        const res = await registerForEvent(hackathon.id);
+        if (res.success) {
+          setIsRegistered(true);
+          setHackathon((prev) => ({
+            ...prev,
+            participantCount: res.participantCount ?? (prev.participantCount + 1),
+          }));
+          toast.success(res.message || "Registered successfully! Confirmation email sent.");
+        } else {
+          toast.error(res.error || "Failed to register for hackathon.");
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update registration status.");
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
@@ -128,9 +181,16 @@ function EventsContent() {
         throw new Error(err.detail || "Failed to submit project.");
       }
 
-      setSubmitSuccessMsg(`Project "${submissionForm.title}" submitted successfully to ${hackathon.title}!`);
+      const successText = `Project "${submissionForm.title}" submitted successfully to ${hackathon.title}! Confirmation email sent.`;
+      setSubmitSuccessMsg(successText);
+      toast.success(successText);
+      setHackathon((prev) => ({
+        ...prev,
+        submissionCount: prev.submissionCount + 1,
+      }));
     } catch (err: any) {
       setSubmitErrorMsg(err.message || "Failed to submit project.");
+      toast.error(err.message || "Failed to submit project.");
     } finally {
       setSubmitSubmitting(false);
     }
@@ -153,17 +213,32 @@ function EventsContent() {
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(teamInviteLink);
       setInviteCopied(true);
+      toast.success("Invite link copied to clipboard!");
       setTimeout(() => setInviteCopied(false), 2000);
     }
   };
 
-  const handleSendEmailInvite = (e: React.FormEvent) => {
+  const handleSendEmailInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail || !inviteEmail.includes("@")) return;
-    if (!pendingInvites.includes(inviteEmail)) {
-      setPendingInvites([...pendingInvites, inviteEmail]);
+    if (!inviteEmail || !inviteEmail.includes("@")) {
+      toast.error("Please enter a valid email address.");
+      return;
     }
-    setInviteEmail("");
+    try {
+      const { inviteTeammate } = await import("@/lib/api");
+      const res = await inviteTeammate(hackathon.id || hackathon.slug, inviteEmail, undefined, teamInviteLink);
+      if (res.success) {
+        if (!pendingInvites.includes(inviteEmail)) {
+          setPendingInvites([...pendingInvites, inviteEmail]);
+        }
+        toast.success(res.message || `Invitation sent to ${inviteEmail}!`);
+        setInviteEmail("");
+      } else {
+        toast.error(res.message || "Failed to send invitation.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send invitation.");
+    }
   };
 
   const formattedStartDate = new Date(hackathon.startDate).toLocaleDateString(
@@ -283,7 +358,29 @@ function EventsContent() {
         </div>
 
         {/* CTA Bar */}
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <button
+            type="button"
+            disabled={registering}
+            onClick={handleToggleRegister}
+            className={`inline-flex items-center gap-2 font-bold text-xs px-6 py-3 rounded-full transition-all ${
+              isRegistered
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-400/40"
+                : "bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/30"
+            }`}
+          >
+            {registering ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isRegistered ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" /> Registered Participant ✓
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" /> Register for Hackathon
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => handleTabClick("submit")}

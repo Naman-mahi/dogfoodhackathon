@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ToastProvider from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "DOGFOOD - Autonomous Hackathon Evaluation Platform",
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
+        <ToastProvider />
         {/* Navbar is handled per-layout for dashboard/events routes */}
         <Navbar />
         <main className="flex-1">{children}</main>

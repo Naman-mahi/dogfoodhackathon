@@ -5,7 +5,10 @@ from sqlalchemy import select, insert, update, delete, or_
 from app.db.session import engine
 from app.db.models.event import events_table
 from app.db.models.track import tracks_table
+from app.db.models.registration import event_registrations_table
 from app.schemas.event import EventCreate, EventUpdate, TrackCreate
+from app.core.exceptions import NotFoundException
+from app.services.email_service import EmailService
 
 class EventService:
     @staticmethod
@@ -121,3 +124,200 @@ class EventService:
             )
             conn.execute(stmt)
         return {"id": data.id, "event_id": event_id, "name": data.name}
+    @staticmethod
+    def register_user(
+        event_id_or_slug: str,
+        user_id: str,
+        email: Optional[str] = None,
+        name: Optional[str] = None,
+        team_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        evt = EventService.get_event(event_id_or_slug)
+        if not evt:
+            raise NotFoundException(f"Event '{event_id_or_slug}' not found")
+        event_id = evt["id"]
+
+        with engine.begin() as conn:
+            check_stmt = select(event_registrations_table).where(
+                event_registrations_table.c.event_id == event_id,
+                event_registrations_table.c.user_id == user_id,
+            )
+            existing = conn.execute(check_stmt).mappings().first()
+            if existing:
+                return {
+                    "registered": True,
+                    "event_id": event_id,
+                    "user_id": user_id,
+                    "registration": dict(existing),
+                    "participant_count": evt.get("participant_count", 0),
+                    "message": "User is already registered for this event",
+                }
+
+            reg_id = f"reg_{uuid.uuid4().hex[:10]}"
+            insert_stmt = insert(event_registrations_table).values(
+                id=reg_id,
+                event_id=event_id,
+                user_id=user_id,
+                user_email=email,
+                user_name=name,
+                team_id=team_id,
+                status="confirmed",
+            )
+            conn.execute(insert_stmt)
+
+            upd_stmt = (
+                update(events_table)
+                .where(events_table.c.id == event_id)
+                .values(participant_count=events_table.c.participant_count + 1)
+                .returning(events_table.c.participant_count)
+            )
+            new_count = conn.execute(upd_stmt).scalar() or (evt.get("participant_count", 0) + 1)
+
+            reg_row = conn.execute(check_stmt).mappings().first()
+
+        # Send confirmation email
+        if email:
+            try:
+                EmailService.send_registration_email(
+                    user_email=email,
+                    user_name=name,
+                    event_data=evt,
+                )
+            except Exception:
+                pass
+
+        return {
+            "registered": True,
+            "event_id": event_id,
+            "user_id": user_id,
+            "registration": dict(reg_row) if reg_row else None,
+            "participant_count": new_count,
+            "message": "Successfully registered for event",
+        }
+
+    @staticmethod
+    def unregister_user(event_id_or_slug: str, user_id: str) -> Dict[str, Any]:
+        evt = EventService.get_event(event_id_or_slug)
+        if not evt:
+            raise NotFoundException(f"Event '{event_id_or_slug}' not found")
+        event_id = evt["id"]
+
+        user_email = None
+        user_name = None
+
+        with engine.begin() as conn:
+            find_reg = conn.execute(
+                select(event_registrations_table.c.user_email, event_registrations_table.c.user_name).where(
+                    event_registrations_table.c.event_id == event_id,
+                    event_registrations_table.c.user_id == user_id,
+                )
+            ).mappings().first()
+            if find_reg:
+                user_email = find_reg.get("user_email")
+                user_name = find_reg.get("user_name")
+
+            del_stmt = delete(event_registrations_table).where(
+                event_registrations_table.c.event_id == event_id,
+                event_registrations_table.c.user_id == user_id,
+            )
+            res = conn.execute(del_stmt)
+            if res.rowcount > 0:
+                curr_count = evt.get("participant_count", 0)
+                new_count = max(0, curr_count - 1)
+                upd_stmt = (
+                    update(events_table)
+                    .where(events_table.c.id == event_id)
+                    .values(participant_count=new_count)
+                )
+                conn.execute(upd_stmt)
+
+                if user_email:
+                    try:
+                        EmailService.send_unregistration_email(
+                            user_email=user_email,
+                            user_name=user_name,
+                            event_data=evt,
+                        )
+                    except Exception:
+                        pass
+
+                return {
+                    "registered": False,
+                    "event_id": event_id,
+                    "user_id": user_id,
+                    "participant_count": new_count,
+                    "message": "Successfully unregistered from event",
+                }
+            return {
+                "registered": False,
+                "event_id": event_id,
+                "user_id": user_id,
+                "participant_count": evt.get("participant_count", 0),
+                "message": "User was not registered for this event",
+            }
+
+    @staticmethod
+    def get_registration_status(event_id_or_slug: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+        evt = EventService.get_event(event_id_or_slug)
+        if not evt:
+            raise NotFoundException(f"Event '{event_id_or_slug}' not found")
+        event_id = evt["id"]
+        count = evt.get("participant_count", 0)
+
+        if not user_id:
+            return {
+                "registered": False,
+                "event_id": event_id,
+                "user_id": None,
+                "registration": None,
+                "participant_count": count,
+            }
+
+        with engine.connect() as conn:
+            stmt = select(event_registrations_table).where(
+                event_registrations_table.c.event_id == event_id,
+                event_registrations_table.c.user_id == user_id,
+            )
+            reg = conn.execute(stmt).mappings().first()
+            return {
+                "registered": reg is not None,
+                "event_id": event_id,
+                "user_id": user_id,
+                "registration": dict(reg) if reg else None,
+                "participant_count": count,
+            }
+
+    @staticmethod
+    def list_user_registrations(user_id: str) -> List[Dict[str, Any]]:
+        with engine.connect() as conn:
+            stmt = (
+                select(
+                    events_table,
+                    event_registrations_table.c.status.label("registration_status"),
+                    event_registrations_table.c.created_at.label("registered_at"),
+                )
+                .join(events_table, event_registrations_table.c.event_id == events_table.c.id)
+                .where(event_registrations_table.c.user_id == user_id)
+                .order_by(event_registrations_table.c.created_at.desc())
+            )
+            rows = conn.execute(stmt).mappings().fetchall()
+            results = []
+            for r in rows:
+                ev_dict = dict(r)
+                trk_stmt = select(tracks_table).where(tracks_table.c.event_id == r["id"])
+                ev_dict["tracks"] = [dict(t) for t in conn.execute(trk_stmt).mappings().fetchall()]
+                results.append(ev_dict)
+            return results
+
+    @staticmethod
+    def list_event_registrations(event_id_or_slug: str) -> List[Dict[str, Any]]:
+        evt = EventService.get_event(event_id_or_slug)
+        if not evt:
+            raise NotFoundException(f"Event '{event_id_or_slug}' not found")
+        with engine.connect() as conn:
+            stmt = select(event_registrations_table).where(
+                event_registrations_table.c.event_id == evt["id"]
+            ).order_by(event_registrations_table.c.created_at.desc())
+            rows = conn.execute(stmt).mappings().fetchall()
+            return [dict(r) for r in rows]
+

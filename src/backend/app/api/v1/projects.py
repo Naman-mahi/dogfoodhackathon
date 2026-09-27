@@ -44,6 +44,14 @@ def like_project(project_id_or_slug: str):
     new_likes = ProjectService.like_project(proj["id"])
     return {"project_id": proj["id"], "likes_count": new_likes}
 
+@router.get("/user/my-submission", response_model=Optional[ProjectOut])
+def get_my_submission(
+    hackathon: str = Query(..., description="Hackathon ID or slug"),
+    user: UserSession = Depends(require_auth),
+):
+    """Retrieve the current logged-in participant's submission for a hackathon."""
+    return ProjectService.get_user_event_submission(hackathon, user.user_id)
+
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 @router.post("/new", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 def submit_project(
@@ -56,7 +64,8 @@ def submit_project(
     If the event is closed, refuses submission with HTTP 4xx.
     """
     submitter_team = user.user_id if user else "tm_anonymous"
-    return ProjectService.create_project(payload, submitter_team=submitter_team)
+    user_id = user.user_id if user else None
+    return ProjectService.create_project(payload, submitter_team=submitter_team, user_id=user_id)
 
 @router.put("/{project_id}", response_model=ProjectOut)
 def update_project(

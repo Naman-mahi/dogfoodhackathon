@@ -61,7 +61,8 @@ Key architectural tenets:
   │   ┌─────────────────────────────────────────────────────────────────────┐   │
   │   │ Persistence Layer (PostgreSQL 15 - Port 5432)                       │   │
   │   │  - Relational tables: users, sessions, events, tracks, teams,       │   │
-  │   │    projects, judges, rubrics, scores, votes, comments, audit_logs   │   │
+  │   │    projects, judges, rubrics, scores, votes, comments, audit_logs,  │   │
+  │   │    event_registrations, email_logs                                  │   │
   │   │  - Deterministic fixture seeder (seed.py + seed_data.py)            │   │
   │   └─────────────────────────────────────────────────────────────────────┘   │
   └─────────────────────────────────────────────────────────────────────────────┘

@@ -14,6 +14,8 @@ import app.db.models.judge
 import app.db.models.rubric
 import app.db.models.score
 import app.db.models.audit
+import app.db.models.registration
+import app.db.models.email_log
 
 def get_engine():
     db_url = settings.DATABASE_URL
