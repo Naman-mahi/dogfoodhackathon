@@ -4,8 +4,25 @@ import React, { useState } from "react";
 import { Plus, X, AlertCircle, CheckCircle2, Loader2, GitBranch } from "lucide-react";
 import { submitProject } from "@/lib/api";
 
-export default function ProjectSubmissionModal() {
-  const [isOpen, setIsOpen] = useState(false);
+interface ProjectSubmissionModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  showButton?: boolean;
+}
+
+export default function ProjectSubmissionModal({
+  isOpen: controlledIsOpen,
+  onClose: controlledOnClose,
+  showButton = true,
+}: ProjectSubmissionModalProps = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = (val: boolean) => {
+    if (controlledOnClose && !val) {
+      controlledOnClose();
+    }
+    setInternalIsOpen(val);
+  };
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -60,13 +77,15 @@ export default function ProjectSubmissionModal() {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 px-5 rounded-full transition-all shadow-sm"
-      >
-        <Plus className="w-4 h-4" />
-        Submit Project
-      </button>
+      {showButton && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 px-5 rounded-full transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Submit Project
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">

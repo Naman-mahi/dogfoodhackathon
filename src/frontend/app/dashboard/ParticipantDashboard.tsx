@@ -238,6 +238,7 @@ export default function ParticipantDashboard() {
       <ProjectSubmissionModal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
+        showButton={false}
       />
     </div>
   );
