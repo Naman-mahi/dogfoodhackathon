@@ -27,11 +27,25 @@ function EventsContent() {
     if (t) setActiveTab(t);
   }, [searchParams]);
 
-  // Find the hackathon by slug or id, fallback to the first one
-  const hackathon =
-    HACKATHONS_DATA.find(
-      (h) => h.slug === eventIdentifier || h.id === eventIdentifier
-    ) || HACKATHONS_DATA[0];
+  // Find the hackathon by slug or id with dynamic API sync
+  const [hackathon, setHackathon] = useState(() => {
+    return (
+      HACKATHONS_DATA.find(
+        (h) => h.slug === eventIdentifier || h.id === eventIdentifier
+      ) || HACKATHONS_DATA[0]
+    );
+  });
+
+  useEffect(() => {
+    import("@/lib/api").then(({ fetchEvents }) => {
+      fetchEvents().then((events) => {
+        const found = events.find(
+          (h) => h.slug === eventIdentifier || h.id === eventIdentifier
+        );
+        if (found) setHackathon(found);
+      });
+    });
+  }, [eventIdentifier]);
 
   const formattedStartDate = new Date(hackathon.startDate).toLocaleDateString(
     "en-US",

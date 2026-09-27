@@ -3,12 +3,13 @@ import Link from "next/link";
 import {
   Search,
   ExternalLink,
-  Share2,
   ArrowLeft,
   ArrowRight,
   Globe,
 } from "lucide-react";
-import { PROJECTS_DATA, Project } from "@/lib/mockData";
+import { fetchProjects, fetchProject } from "@/lib/api";
+import ProjectSubmissionModal from "./ProjectSubmissionModal";
+import LikeButton from "./LikeButton";
 
 export default async function ProjectsPage({
   searchParams,
@@ -20,26 +21,14 @@ export default async function ProjectsPage({
   const searchQuery = (resolvedParams.q || "").toLowerCase().trim();
   const selectedTrack = resolvedParams.track || "all";
 
+  // Fetch live active project or project list from REST API
   const activeProject = selectedProjectId
-    ? PROJECTS_DATA.find(
-        (p) => p.slug === selectedProjectId || p.id === selectedProjectId
-      ) || null
+    ? await fetchProject(selectedProjectId)
     : null;
 
-  const filteredProjects = PROJECTS_DATA.filter((p) => {
-    if (selectedTrack !== "all" && p.track !== selectedTrack) {
-      return false;
-    }
-    if (searchQuery) {
-      const matchesTitle = p.title.toLowerCase().includes(searchQuery);
-      const matchesSummary = p.summary.toLowerCase().includes(searchQuery);
-      const matchesTeam = p.team.toLowerCase().includes(searchQuery);
-      const matchesTrack = p.trackLabel.toLowerCase().includes(searchQuery);
-      if (!matchesTitle && !matchesSummary && !matchesTeam && !matchesTrack) {
-        return false;
-      }
-    }
-    return true;
+  const filteredProjects = await fetchProjects({
+    track: selectedTrack,
+    q: searchQuery,
   });
 
   // Project Details Showcase View (if ?slug=... or ?id=... is selected)
@@ -62,10 +51,10 @@ export default async function ProjectsPage({
                   {activeProject.trackLabel}
                 </span>
                 <Link
-                  href={`/events?slug=${activeProject.hackathonSlug}`}
+                  href={`/events?id=${activeProject.hackathonSlug || activeProject.hackathonId}`}
                   className="badge-pill bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                 >
-                  Event: {activeProject.hackathonSlug}
+                  Event: {activeProject.hackathonSlug || activeProject.hackathonId}
                 </Link>
               </div>
               <span className="text-xs text-slate-400 font-mono">
@@ -73,9 +62,16 @@ export default async function ProjectsPage({
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              {activeProject.title}
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                {activeProject.title}
+              </h1>
+              <LikeButton
+                idOrSlug={activeProject.slug || activeProject.id}
+                initialLikes={activeProject.likesCount}
+              />
+            </div>
+
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
               {activeProject.summary}
             </p>
@@ -92,10 +88,6 @@ export default async function ProjectsPage({
                   day: "numeric",
                   year: "numeric",
                 })}
-              </div>
-              <div>
-                <span className="font-semibold text-slate-700">Likes: </span>
-                {activeProject.likesCount}
               </div>
             </div>
           </div>
@@ -137,15 +129,17 @@ export default async function ProjectsPage({
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
-            <a
-              href={activeProject.repoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-6 py-3 rounded-full transition-all shadow-sm"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View Repository &rarr;
-            </a>
+            {activeProject.repoUrl && (
+              <a
+                href={activeProject.repoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-6 py-3 rounded-full transition-all shadow-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Repository &rarr;
+              </a>
+            )}
 
             {activeProject.demoUrl && (
               <a
@@ -167,13 +161,16 @@ export default async function ProjectsPage({
   // Projects Gallery View
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Project Gallery
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500">
-          Explore peer-evaluated submissions, architectures, and open-source prototypes.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            Project Gallery
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Explore peer-evaluated submissions, architectures, and open-source prototypes.
+          </p>
+        </div>
+        <ProjectSubmissionModal />
       </div>
 
       {/* Filter and Search Bar */}
@@ -198,11 +195,10 @@ export default async function ProjectsPage({
               className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Tracks</option>
-              <option value="devtools">DevTools &amp; Infra</option>
-              <option value="ai">Artificial Intelligence</option>
-              <option value="web3">Web3 &amp; Crypto</option>
-              <option value="climate">Climate &amp; Energy</option>
-              <option value="opensource">Open Source</option>
+              <option value="trk_01">DevTools &amp; Infra</option>
+              <option value="trk_02">Data &amp; Calibration</option>
+              <option value="trk_03">Zero-Trust &amp; Privacy</option>
+              <option value="trk_04">Climate &amp; Energy</option>
             </select>
           </div>
 
@@ -261,18 +257,19 @@ export default async function ProjectsPage({
                   <div>
                     Team: <span className="text-slate-800 font-semibold">{p.team}</span>
                   </div>
-                  <div className="text-slate-400">
-                    {p.likesCount} likes
-                  </div>
+                  <LikeButton
+                    idOrSlug={p.slug || p.id}
+                    initialLikes={p.likesCount}
+                  />
                 </div>
               </div>
 
               <div className="pt-2 border-t border-slate-100">
                 <Link
-                  href={`/projects?slug=${p.slug}`}
+                  href={`/projects?slug=${p.slug || p.id}`}
                   className="w-full inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
                 >
-                  View Project
+                  View Architecture
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

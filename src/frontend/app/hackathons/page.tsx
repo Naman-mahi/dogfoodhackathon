@@ -6,12 +6,21 @@ import { Search, ArrowRight, RotateCcw } from "lucide-react";
 import { HACKATHONS_DATA } from "@/lib/mockData";
 
 export default function HackathonsPage() {
+  const [hackathonsList, setHackathonsList] = useState(HACKATHONS_DATA);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedPrizeTier, setSelectedPrizeTier] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("soonest");
+
+  React.useEffect(() => {
+    import("@/lib/api").then(({ fetchEvents }) => {
+      fetchEvents().then((evs) => {
+        if (evs && evs.length > 0) setHackathonsList(evs);
+      });
+    });
+  }, []);
 
   const toggleFilter = (list: string[], setList: (val: string[]) => void, item: string) => {
     if (list.includes(item)) {
@@ -31,7 +40,7 @@ export default function HackathonsPage() {
   };
 
   const filteredHackathons = useMemo(() => {
-    return HACKATHONS_DATA.filter((h) => {
+    return hackathonsList.filter((h) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = h.title.toLowerCase().includes(q);
