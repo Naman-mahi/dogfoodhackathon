@@ -2,16 +2,41 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   DESIGN TOKENS (LIGHT & DARK THEMES)
+   DESIGN TOKENS (CURATED 10-COLOR STRICT DESIGN SYSTEM)
+   ==========================================================================
+   Color 1:  #080C16 - Deep Obsidian (Dark canvas / sidebar / terminal)
+   Color 2:  #0F172A - Slate Charcoal (Dark cards / menus / dropdowns)
+   Color 3:  #F8FAFC - Pure Canvas Light (Main body background)
+   Color 4:  #FFFFFF - Crisp White (Light cards / elevated surfaces)
+   Color 5:  #2563EB - Electric Blue (Brand primary, links, primary CTAs)
+   Color 6:  #7C3AED - Royal Violet (Organizer console, admin highlights)
+   Color 7:  #0284C7 - Azure Sky (Judge console, peer reviews)
+   Color 8:  #10B981 - Emerald Green (Live status, submissions, participants)
+   Color 9:  #EF4444 - Signal Rose (Deadlines, critical alerts, destructive actions)
+   Color 10: #E2E8F0 - Neutral Slate Border & dividers
    ========================================================================== */
 :root {
-  /* Canvas & Backgrounds */
-  --bg-canvas: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-elevated: #ffffff;
+  /* The 10 Core Color Tokens */
+  --c-dark-bg: #080c16;
+  --c-dark-surface: #0f172a;
+  --c-light-bg: #f8fafc;
+  --c-light-surface: #ffffff;
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
+  --c-organizer: #7c3aed;
+  --c-judge: #0284c7;
+  --c-success: #10b981;
+  --c-danger: #ef4444;
+  --c-border: #e2e8f0;
+  --c-border-dark: #1e293b;
+
+  /* Canvas & Backgrounds (Mapped to 10 Colors) */
+  --bg-canvas: var(--c-light-bg);
+  --bg-surface: var(--c-light-surface);
+  --bg-card: var(--c-light-surface);
+  --bg-elevated: var(--c-light-surface);
   --bg-subtle: #f1f5f9;
-  --bg-muted: #e2e8f0;
+  --bg-muted: var(--c-border);
 
   /* Text & Foregrounds */
   --fg-primary: #0f172a;
@@ -19,24 +44,24 @@
   --fg-muted: #64748b;
   --fg-subtle: #94a3b8;
 
-  /* Brand Accents (Vibrant Electric Blue & Indigo) */
-  --brand-primary: #2563eb;
-  --brand-primary-hover: #1d4ed8;
-  --brand-primary-light: #eff6ff;
-  --brand-accent: #6366f1;
+  /* Brand Accents */
+  --brand-primary: var(--c-primary);
+  --brand-primary-hover: var(--c-primary-hover);
+  --brand-primary-light: rgba(37, 99, 235, 0.1);
+  --brand-accent: var(--c-organizer);
   --brand-glow: rgba(37, 99, 235, 0.25);
 
   /* Status Colors */
-  --status-live: #10b981;
+  --status-live: var(--c-success);
   --status-live-bg: rgba(16, 185, 129, 0.12);
   --status-warning: #f59e0b;
-  --status-error: #ef4444;
+  --status-error: var(--c-danger);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(226, 232, 240, 0.8);
+  --border-subtle: var(--c-border);
   --border-medium: #cbd5e1;
   --border-strong: #94a3b8;
-  --card-border: rgba(226, 232, 240, 0.7);
+  --card-border: var(--c-border);
 
   /* Elevation & Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
@@ -50,6 +75,26 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
   --radius-pill: 9999px;
+}
+
+/* Container Fluid Full-Width System */
+.container-fluid {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .container-fluid {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .container-fluid {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
 /* Dark Theme Overrides */

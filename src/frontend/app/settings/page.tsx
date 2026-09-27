@@ -156,7 +156,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Navigation & Header */}
       <div className="flex items-center justify-between">
         <Link

@@ -56,9 +56,9 @@ export default function DashboardSidebar({
   const isOrganizer = role === "organizer";
 
   return (
-    <aside className="w-full lg:w-64 bg-[#080c16] text-white flex flex-col justify-between shrink-0 border-r border-slate-800/80 min-h-screen">
-      {/* Top Section */}
-      <div>
+    <aside className="w-full lg:w-64 bg-[#080c16] text-white flex flex-col justify-between shrink-0 border-r border-slate-800/80 sticky top-16 h-[calc(100vh-4rem)] z-40">
+      {/* Top Section — Scrollable navigation */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {/* Branding & Console Badge Header */}
         <div className="p-5 border-b border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center gap-3">
@@ -190,8 +190,8 @@ export default function DashboardSidebar({
         </div>
       </div>
 
-      {/* Bottom Section: Reusable UserAccountCard */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/20">
+      {/* Bottom Section: Pinned UserAccountCard */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 shrink-0 z-20">
         <UserAccountCard user={user} variant="sidebar" />
       </div>
     </aside>

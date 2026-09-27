@@ -70,7 +70,7 @@ export default function ParticipantDashboard({ user }: ParticipantDashboardProps
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-10">
       {/* Header */}
       <div className="card-modern p-6 sm:p-8 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 text-white shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-4">

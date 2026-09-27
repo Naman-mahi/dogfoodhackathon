@@ -19,23 +19,22 @@ export default function Footer() {
     });
   }, []);
 
-  // For organizers and judges, or any organizer/judge dashboard or event management routes,
-  // console occupies full layout without public website footer.
-  if (
-    role === "organizer" ||
-    role === "judge" ||
-    pathname.startsWith("/dashboard/organizer") ||
-    pathname.startsWith("/dashboard/judge") ||
+  // The footer is shown on all visitor and public user routes (/, /hackathons, /projects, /results, /about, /events, etc.)
+  // It is only omitted on internal console/dashboard workspace screens where sidebars or full consoles are active.
+  const isDashboardWorkspace =
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/events/new" ||
     pathname.startsWith("/organizer") ||
-    pathname.startsWith("/judge") ||
-    pathname.startsWith("/events/new")
-  ) {
+    pathname.startsWith("/judge");
+
+  if (isDashboardWorkspace) {
     return null;
   }
 
   return (
     <footer className="bg-slate-50 border-t border-slate-200 text-slate-600 text-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">

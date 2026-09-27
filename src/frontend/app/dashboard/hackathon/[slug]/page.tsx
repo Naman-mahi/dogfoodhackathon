@@ -180,7 +180,7 @@ export default function HackathonDetailPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Back */}
       <Link href="/dashboard" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to My Hackathons

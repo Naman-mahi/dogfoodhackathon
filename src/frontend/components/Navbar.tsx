@@ -89,7 +89,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <span className="font-black text-2xl tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
@@ -128,55 +128,58 @@ export default function Navbar() {
         {/* Right Section: User Profile Dropdown or Auth Buttons */}
         <div className="hidden sm:flex items-center space-x-3">
           {currentUser ? (
-            <div className="relative" ref={dropdownRef}>
-              {/* Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className={`flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-all border ${
-                  userDropdownOpen
-                    ? "border-blue-500/50 bg-blue-50/30"
-                    : "border-slate-200"
-                } cursor-pointer`}
-                aria-expanded={userDropdownOpen}
-                aria-label="User Account Menu"
-              >
-                <img
-                  src={
-                    currentUser.avatar_url ||
-                    `https://api.dicebear.com/7.x/identicon/svg?seed=${currentUser.email}`
-                  }
-                  alt={currentUser.name}
-                  className={`w-7 h-7 rounded-full ring-2 ${getRoleRingClass(
-                    currentUser.role
-                  )} object-cover`}
-                />
-                <div className="text-left">
-                  <div className="text-xs font-bold text-slate-900 leading-none truncate max-w-[100px]">
-                    {currentUser.name.split(" ")[0]}
-                  </div>
-                  <div className="text-[10px] font-mono uppercase font-bold leading-none mt-1 text-slate-500">
-                    {currentUser.role}
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                    userDropdownOpen ? "rotate-180 text-blue-600" : ""
-                  }`}
-                />
-              </button>
-
-              {/* Dropdown Menu — Reusing UserAccountCard */}
-              {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <UserAccountCard
-                    user={currentUser}
-                    onCloseDropdown={() => setUserDropdownOpen(false)}
-                    variant="dropdown"
+            // STRICT RULE: Do NOT show profile option on header for organizer and judge roles!
+            currentUser.role === "organizer" || currentUser.role === "judge" ? null : (
+              <div className="relative" ref={dropdownRef}>
+                {/* Trigger Button */}
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className={`flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-all border ${
+                    userDropdownOpen
+                      ? "border-blue-500/50 bg-blue-50/30"
+                      : "border-slate-200"
+                  } cursor-pointer`}
+                  aria-expanded={userDropdownOpen}
+                  aria-label="User Account Menu"
+                >
+                  <img
+                    src={
+                      currentUser.avatar_url ||
+                      `https://api.dicebear.com/7.x/identicon/svg?seed=${currentUser.email}`
+                    }
+                    alt={currentUser.name}
+                    className={`w-7 h-7 rounded-full ring-2 ${getRoleRingClass(
+                      currentUser.role
+                    )} object-cover`}
                   />
-                </div>
-              )}
-            </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-slate-900 leading-none truncate max-w-[100px]">
+                      {currentUser.name.split(" ")[0]}
+                    </div>
+                    <div className="text-[10px] font-mono uppercase font-bold leading-none mt-1 text-slate-500">
+                      {currentUser.role}
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                      userDropdownOpen ? "rotate-180 text-blue-600" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu — Reusing UserAccountCard */}
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <UserAccountCard
+                      user={currentUser}
+                      onCloseDropdown={() => setUserDropdownOpen(false)}
+                      variant="dropdown"
+                    />
+                  </div>
+                )}
+              </div>
+            )
           ) : (
             <div className="flex items-center space-x-2">
               <Link
@@ -233,11 +236,14 @@ export default function Navbar() {
 
           <div className="pt-2 border-t border-slate-100">
             {currentUser ? (
-              <UserAccountCard
-                user={currentUser}
-                onCloseDropdown={() => setMobileMenuOpen(false)}
-                variant="sidebar"
-              />
+              // STRICT RULE: Do NOT show profile option on header mobile menu for organizer/judge
+              currentUser.role === "organizer" || currentUser.role === "judge" ? null : (
+                <UserAccountCard
+                  user={currentUser}
+                  onCloseDropdown={() => setMobileMenuOpen(false)}
+                  variant="dropdown"
+                />
+              )
             ) : (
               <div className="flex flex-col space-y-2">
                 <Link

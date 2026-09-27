@@ -187,7 +187,7 @@ function EventsContent() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Event Header Card */}
       <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-8 sm:p-10 text-white relative overflow-hidden shadow-lg space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

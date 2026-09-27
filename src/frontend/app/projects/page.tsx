@@ -34,7 +34,7 @@ export default async function ProjectsPage({
   // Project Details Showcase View (if ?slug=... or ?id=... is selected)
   if (activeProject) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         <Link
           href="/projects"
           className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors"
@@ -160,7 +160,7 @@ export default async function ProjectsPage({
 
   // Projects Gallery View
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">

@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="space-y-24 pb-20">
       {/* 1. HERO SECTION */}
-      <section className="hero-glow pt-16 pb-20 px-4 sm:px-6 lg:px-8 text-center max-w-4xl mx-auto space-y-6">
+      <section className="hero-glow pt-16 pb-20 px-4 sm:px-6 lg:px-8 text-center w-full space-y-6">
         {/* Pill Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 uppercase tracking-widest shadow-xs">
           <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
@@ -79,7 +79,7 @@ export default function Home() {
       </section>
 
       {/* 2. ONGOING & UPCOMING HACKATHONS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <section className="w-full px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Browse Events</span>
@@ -246,7 +246,7 @@ export default function Home() {
       </section>
 
       {/* 3. PLATFORM ARCHITECTURE & FAIRNESS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <section className="w-full px-4 sm:px-6 lg:px-8 space-y-8">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Built for Integrity</span>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
@@ -300,7 +300,7 @@ export default function Home() {
       </section>
 
       {/* 4. BOTTOM BANNER CTA */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 pt-10">
+      <section className="w-full px-4 sm:px-6 lg:px-8 text-center space-y-6 pt-10">
         <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Ready to showcase your engineering build?
         </h2>

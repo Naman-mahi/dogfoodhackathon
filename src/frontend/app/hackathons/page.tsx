@@ -96,7 +96,7 @@ export default function HackathonsPage() {
   }, [searchQuery, selectedStatuses, selectedFormats, selectedCategories, selectedPrizeTier, sortBy]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Page Title - Clean Text, No Icon in Heading */}
       <div className="space-y-1">
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
