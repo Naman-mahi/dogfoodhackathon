@@ -1,0 +1,327 @@
+import React from "react";
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <div className="space-y-24 pb-20">
+      {/* 1. HERO SECTION */}
+      <section className="hero-glow pt-16 pb-20 px-4 sm:px-6 lg:px-8 text-center max-w-4xl mx-auto space-y-6">
+        {/* Pill Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 uppercase tracking-widest shadow-xs">
+          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+          DOGFOOD HACKATHON EVALUATION PLATFORM
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-[1.12]">
+          The hackathon platform that <span className="text-blue-600">judges you.</span>
+        </h1>
+
+        {/* Script Accent */}
+        <div className="script-font text-3xl sm:text-4xl text-slate-800 -rotate-2 font-bold select-none">
+          Participate Now!
+        </div>
+
+        {/* Subtitle */}
+        <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+          Robust peer isolation, Empirical Bayes score normalization, and automated certificate generation for modern engineering competitions.
+        </p>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3">
+          <Link
+            href="/hackathons"
+            className="w-full sm:w-auto btn-primary"
+          >
+            Explore Hackathons
+          </Link>
+          <Link
+            href="/projects"
+            className="w-full sm:w-auto btn-secondary"
+          >
+            View Public Gallery
+          </Link>
+        </div>
+
+        {/* Trusted By Logos */}
+        <div className="pt-16 space-y-4">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            Trusted by leading engineering ecosystems
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 opacity-70 grayscale hover:grayscale-0 transition-all text-slate-700 font-bold text-sm">
+            <span className="flex items-center gap-1.5 text-base tracking-tight font-black">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              GitHub
+            </span>
+            <span className="font-extrabold text-base tracking-wider text-slate-800">
+              AWS
+            </span>
+            <span className="font-extrabold text-base tracking-tight text-blue-600">
+              intel.
+            </span>
+            <span className="font-semibold text-base flex items-center gap-1">
+              <span className="w-3.5 h-3.5 grid grid-cols-2 gap-0.5">
+                <span className="bg-red-500 rounded-xs"></span>
+                <span className="bg-green-500 rounded-xs"></span>
+                <span className="bg-blue-500 rounded-xs"></span>
+                <span className="bg-yellow-500 rounded-xs"></span>
+              </span>
+              Microsoft
+            </span>
+            <span className="font-black text-base text-blue-800 tracking-tighter">
+              DELL
+            </span>
+            <span className="font-extrabold text-base tracking-tight text-purple-600">
+              SOLANA
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. ONGOING & UPCOMING HACKATHONS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Browse Events</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+              Ongoing &amp; Upcoming Hackathons
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Explore active competitions and submit your builds for peer-reviewed evaluation.
+            </p>
+          </div>
+          <Link
+            href="/hackathons"
+            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          >
+            View all hackathons with filters &rarr;
+          </Link>
+        </div>
+
+        {/* Hackathon Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: Sample Hack 2026 */}
+          <div className="card-modern overflow-hidden flex flex-col justify-between group">
+            <div>
+              <div className="h-44 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 relative p-4 flex flex-col justify-between text-white">
+                <div className="flex justify-between items-center">
+                  <span className="badge-pill bg-emerald-500 text-white flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    LIVE NOW
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-white text-[10px] font-medium">
+                    2 Days Left
+                  </span>
+                </div>
+                <div className="bg-black/30 backdrop-blur-xs rounded-lg p-2 text-white text-xs font-mono">
+                  Closing: March 1, 2026 (18:00 UTC)
+                </div>
+              </div>
+
+              <div className="p-6 space-y-3">
+                <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wide">DevTools &bull; Systems</span>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Sample Hack 2026 (DOGFOOD)
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                  Official distributed hackathon platform challenge. Test score normalization, peer isolation, and offline appliance execution.
+                </p>
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+                  <span className="font-bold text-slate-800">$25,000 USD Prize</span>
+                  <span>40+ Submissions</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 pt-0 flex gap-2">
+              <Link
+                href="/events?id=sample-hack-2026"
+                className="flex-1 text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+              >
+                Event Details &rarr;
+              </Link>
+              <Link
+                href="/projects"
+                className="text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs py-2.5 px-3 rounded-xl transition-all"
+              >
+                Gallery
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 2: AI Catalyst */}
+          <div className="card-modern overflow-hidden flex flex-col justify-between group">
+            <div>
+              <div className="h-44 bg-gradient-to-tr from-purple-700 via-indigo-800 to-slate-900 relative p-4 flex flex-col justify-between text-white">
+                <div className="flex justify-between items-center">
+                  <span className="badge-pill bg-emerald-500 text-white flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    LIVE NOW
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-white text-[10px] font-medium">
+                    5 Days Left
+                  </span>
+                </div>
+                <div className="bg-black/30 backdrop-blur-xs rounded-lg p-2 text-white text-xs font-mono">
+                  Tracks: Generative AI, LLMOps, Edge ML
+                </div>
+              </div>
+
+              <div className="p-6 space-y-3">
+                <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wide">Artificial Intelligence</span>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  AI Catalyst National Sprint 2026
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                  Build next-generation multi-agent systems and offline real-time neural models. Mentorship from senior research architects.
+                </p>
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+                  <span className="font-bold text-slate-800">$50,000 USD Prize</span>
+                  <span>2,850 Builders</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 pt-0">
+              <Link
+                href="/hackathons"
+                className="w-full block text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+              >
+                Explore &amp; Register &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 3: Open Source Build */}
+          <div className="card-modern overflow-hidden flex flex-col justify-between group">
+            <div>
+              <div className="h-44 bg-gradient-to-tr from-emerald-600 via-teal-700 to-cyan-800 relative p-4 flex flex-col justify-between text-white">
+                <div className="flex justify-between items-center">
+                  <span className="badge-pill bg-blue-600 text-white flex items-center gap-1.5 shadow-sm">
+                    UPCOMING
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-white text-[10px] font-medium">
+                    Starts Apr 12
+                  </span>
+                </div>
+                <div className="bg-black/30 backdrop-blur-xs rounded-lg p-2 text-white text-xs font-mono">
+                  Hybrid · Bengaluru + Online
+                </div>
+              </div>
+
+              <div className="p-6 space-y-3">
+                <span className="text-[11px] font-bold text-teal-600 uppercase tracking-wide">Open Source &bull; Cloud</span>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Open Source Kernel &amp; Systems 2026
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                  Contribute to global developer tools, lightweight databases, container runtimes, and compiler tooling.
+                </p>
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+                  <span className="font-bold text-slate-800">$15,000 USD Prize</span>
+                  <span>890 Registered</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 pt-0">
+              <Link
+                href="/hackathons"
+                className="w-full block text-center bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+              >
+                View Details &rarr;
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center pt-2">
+          <Link
+            href="/hackathons"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+          >
+            Explore All Hackathons with Filters &rarr;
+          </Link>
+        </div>
+      </section>
+
+      {/* 3. PLATFORM ARCHITECTURE & FAIRNESS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Built for Integrity</span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+            Engineered for fair, reproducible evaluations.
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
+            We eliminate spreadsheet chaos, reviewer severity bias, and leaked scores with a mathematically sound evaluation pipeline.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card-modern p-6 space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900">Zero-Trust Role Isolation</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Judges cannot inspect peer scores or rubrics during the evaluation phase. Every score is committed independently.
+            </p>
+            <Link href="/about" className="inline-block text-xs font-semibold text-blue-600 hover:underline pt-2">
+              Learn about role security &rarr;
+            </Link>
+          </div>
+
+          <div className="card-modern p-6 space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900">Empirical Bayes Calibration</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Raw judge rubrics are normalized toward global distributions with shrinkage parameter $k=2.0$, preventing harsh bias.
+            </p>
+            <Link href="/about" className="inline-block text-xs font-semibold text-blue-600 hover:underline pt-2">
+              Read scoring mathematical proof &rarr;
+            </Link>
+          </div>
+
+          <div className="card-modern p-6 space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900">Single-Command Appliance</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Spins up completely offline on port 8080 with zero external cloud dependencies. Fully deterministic and testable.
+            </p>
+            <Link href="/events?id=sample-hack-2026&tab=rules" className="inline-block text-xs font-semibold text-blue-600 hover:underline pt-2">
+              View competition rules &rarr;
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. BOTTOM BANNER CTA */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 pt-10">
+        <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Ready to showcase your engineering build?
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+          Join thousands of developers competing in verified hackathons. Submit your project, get calibrated peer evaluations, and earn verified credentials.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <Link
+            href="/register"
+            className="w-full sm:w-auto btn-primary"
+          >
+            Create Builder Account
+          </Link>
+          <Link
+            href="/projects"
+            className="w-full sm:w-auto btn-secondary"
+          >
+            Explore Public Projects
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
