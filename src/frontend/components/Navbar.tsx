@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { getStoredUser, fetchCurrentUser, logoutUser, AuthUser } from "../lib/auth";
 
 export default function Navbar() {
@@ -58,12 +58,15 @@ export default function Navbar() {
           >
             Leaderboard
           </Link>
-          <Link
-            href="/dashboard"
-            className="hover:text-blue-600 transition-colors font-bold text-slate-900"
-          >
-            Dashboard
-          </Link>
+          {/* ONLY show Dashboard menu if user is authenticated (not a visitor) */}
+          {currentUser && (
+            <Link
+              href="/dashboard"
+              className="hover:text-blue-600 transition-colors font-bold text-slate-900"
+            >
+              Dashboard
+            </Link>
+          )}
           <Link
             href="/about"
             className="hover:text-blue-600 transition-colors"
@@ -72,7 +75,7 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        {/* Right Action: User Status or Login/Register */}
+        {/* Right Action: User Profile Status OR Login/Register for Visitors */}
         <div className="hidden sm:flex items-center space-x-3">
           {currentUser ? (
             <div className="flex items-center gap-3">
@@ -100,7 +103,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-xs text-slate-500 hover:text-rose-600 font-medium px-2 py-1"
+                className="text-xs text-slate-500 hover:text-rose-600 font-medium px-2 py-1 transition-colors"
               >
                 Sign Out
               </button>
@@ -157,13 +160,15 @@ export default function Navbar() {
           >
             Leaderboard
           </Link>
-          <Link
-            href="/dashboard"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-slate-900 font-bold"
-          >
-            Dashboard
-          </Link>
+          {currentUser && (
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-slate-900 font-bold"
+            >
+              Dashboard
+            </Link>
+          )}
           <Link
             href="/about"
             onClick={() => setMobileMenuOpen(false)}
