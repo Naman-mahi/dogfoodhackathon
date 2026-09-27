@@ -94,3 +94,79 @@ Where:
 - $\bar{y}_i$: Sample mean of raw judge scores for project $i$.
 - $n_i$: Total number of independent evaluator reviews for project $i$.
 - $k$: Shrinkage hyperparameter ($k=2.0$) determining the strength of regularizing outliers toward the global consensus.
+
+---
+
+## 5. Frontend Architecture & Design System
+
+### 5.1 Container-Fluid Layout Model
+The entire web interface is engineered under a modern **container-fluid** architecture. Fixed container boundaries (`max-w-7xl`, `max-w-5xl`, etc.) are avoided in favor of full viewport responsiveness (`w-full px-4 sm:px-6 lg:px-8` and `.container-fluid`), allowing expansive data grids, scoring tables, and dashboard workspaces to utilize the complete browser canvas.
+
+### 5.2 Curated 10-Color Design System
+To maintain rigorous UI/UX consistency, the application strictly adheres to a centralized 10-color token palette defined in `globals.css`:
+
+| # | Token | Hex | Role & Purpose |
+|---|---|---|---|
+| 1 | `--c-dark-bg` | `#080C16` | **Deep Obsidian**: Console canvas, fixed sidebar, dark viewport |
+| 2 | `--c-dark-surface` | `#0F172A` | **Slate Charcoal**: Dark elevated cards, user dropdowns, inputs |
+| 3 | `--c-light-bg` | `#F8FAFC` | **Pure Canvas Light**: Main body background |
+| 4 | `--c-light-surface` | `#FFFFFF` | **Crisp White**: Cards, containers, surface panels |
+| 5 | `--c-primary` | `#2563EB` | **Electric Blue**: Brand primary, links, primary CTA buttons |
+| 6 | `--c-organizer` | `#7C3AED` | **Royal Violet**: Organizer Console badge, highlights, admin actions |
+| 7 | `--c-judge` | `#0284C7` | **Azure Sky**: Judge Console badge, peer evaluations, queue tags |
+| 8 | `--c-success` | `#10B981` | **Emerald Green**: Live status indicators, submissions, participant badge |
+| 9 | `--c-danger` | `#EF4444` | **Signal Rose**: Closed deadlines, alerts, destructive/sign-out actions |
+| 10 | `--c-border` | `#E2E8F0` | **Neutral Slate**: Subtle dividers, borders, muted lines |
+
+---
+
+## 6. Role-Based Dashboard & Layout Architecture
+
+```text
+                        ┌───────────────────────────────┐
+                        │        User Navigation        │
+                        └───────────────┬───────────────┘
+                                        │
+                 ┌──────────────────────┼──────────────────────┐
+                 ▼                      ▼                      ▼
+        ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+        │   Participant   │    │    Organizer    │    │      Judge      │
+        └────────┬────────┘    └────────┬────────┘    └────────┬────────┘
+                 │                      │                      │
+        ┌────────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
+        │  Clean Wide     │    │  Fixed Sidebar  │    │  Fixed Sidebar  │
+        │  Header Dropdown│    │  Hub Layout     │    │  Console Layout │
+        │  Public Footer  │    │  NO Footer      │    │  NO Footer      │
+        └─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 6.1 Participant Experience
+- **Workspace Route:** `/dashboard` and `/dashboard/hackathon/[slug]`
+- **Layout:** Clean wide layout without sidebar.
+- **4 Dedicated Workspace Tabs:**
+  1. `Overview`: Dates, prizes, description, and milestone timeline.
+  2. `Tracks`: Competition tracks and criteria.
+  3. `Teams`: Shareable team invite links with 1-click clipboard copy.
+  4. `Submissions`: Submission form with real-time deadline gating.
+- **Account Access:** Handled via the top Navbar dropdown.
+
+### 6.2 Organizer Experience
+- **Workspace Route:** `/dashboard/organizer` & `/events/new`
+- **Layout:** Dedicated `OrganizerLayout` with fixed, sticky sidebar (`sticky top-16 h-[calc(100vh-4rem)]`).
+- **Capabilities:** Event lifecycle transition, rubric weights calibration, real-time judge progress tracking, CSV score matrix export, and multi-step event wizard.
+- **Navigation:** Header profile dropdown is strictly omitted; all profile and settings access is via the pinned bottom sidebar dropdown.
+- **Footer:** Suppressed across all organizer console views.
+
+### 6.3 Judge Experience
+- **Workspace Route:** `/dashboard/judge`
+- **Layout:** Dedicated `JudgeLayout` with fixed, sticky sidebar (`sticky top-16 h-[calc(100vh-4rem)]`).
+- **Capabilities:** Assigned submission queue, multi-criteria rubric scoring, peer isolation verification, and scoring guide.
+- **Navigation:** Header profile dropdown is strictly omitted; profile and settings access is via the pinned bottom sidebar dropdown.
+- **Footer:** Suppressed across all judge console views.
+
+### 6.4 Zero-Modal Profile & Settings Routing
+All profile updates and account security adjustments are routed to full, dedicated pages instead of modal dialogs:
+- **Profile:** `/profile` — Public identity, bio, GitHub integration, and role statistics.
+- **Settings:** `/settings` — Profile customization, avatar seed selection, and credential settings.
+- The sidebar bottom user card acts as an interactive popup trigger navigating directly to these dedicated pages.
+
