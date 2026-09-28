@@ -26,7 +26,9 @@ export default function Footer() {
     pathname.startsWith("/dashboard/") ||
     pathname === "/events/new" ||
     pathname.startsWith("/organizer") ||
-    pathname.startsWith("/judge");
+    pathname.startsWith("/judge") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/embed");
 
   if (isDashboardWorkspace) {
     return null;

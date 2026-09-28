@@ -1,6 +1,6 @@
 import os
 import time
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from app.core.config import settings
 from app.db.base import metadata
 
@@ -42,4 +42,11 @@ def init_db():
     if engine is None:
         engine = get_engine()
     metadata.create_all(engine)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'submitted';"))
+            conn.commit()
+    except Exception as e:
+        print(f"Schema upgrade check: {e}")
     return engine
+

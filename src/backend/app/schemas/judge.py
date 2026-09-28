@@ -6,6 +6,7 @@ class JudgeCreate(BaseModel):
     name: str
     email: str
     tracks: Optional[List[str]] = []
+    password: Optional[str] = None
 
 class JudgeUpdate(BaseModel):
     name: Optional[str] = None
@@ -17,3 +18,4 @@ class JudgeOut(BaseModel):
     name: str
     email: str
     tracks: List[str]
+    initial_password: Optional[str] = None

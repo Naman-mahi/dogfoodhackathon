@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   getStoredUser,
   fetchCurrentUser,
@@ -20,6 +21,7 @@ import {
   ArrowLeft,
   Shield,
   Camera,
+  KeyRound,
 } from "lucide-react";
 
 export default function ProfileSettingsPage() {
@@ -96,6 +98,7 @@ export default function ProfileSettingsPage() {
       ...prev,
       avatar_url: `https://api.dicebear.com/7.x/identicon/svg?seed=${seed}`,
     }));
+    toast.success("Avatar updated!");
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -137,10 +140,14 @@ export default function ProfileSettingsPage() {
       };
       saveStoredUser(newStoredUser);
       setCurrentUser(newStoredUser);
-      setSuccessMsg("Profile settings updated successfully!");
+      const successText = "Profile settings updated successfully!";
+      setSuccessMsg(successText);
+      toast.success(successText);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      setErrorMsg(err.message || "An unexpected error occurred.");
+      const errText = err.message || "An unexpected error occurred.";
+      setErrorMsg(errText);
+      toast.error(errText);
     } finally {
       setSaving(false);
     }
@@ -301,6 +308,25 @@ export default function ProfileSettingsPage() {
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Security & Password */}
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">Account Security</p>
+                <p className="text-[11px] text-slate-500">Update your account login password</p>
+              </div>
+            </div>
+            <Link
+              href="/change-password"
+              className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl transition-colors cursor-pointer"
+            >
+              Change Password
+            </Link>
           </div>
 
           <div className="pt-2 flex items-center justify-between border-t border-slate-100">

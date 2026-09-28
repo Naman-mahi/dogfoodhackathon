@@ -17,6 +17,7 @@ class ProjectBase(BaseModel):
     hackathon_id: Optional[str] = Field("sample-hack-2026", description="Associated hackathon ID")
     hackathon_slug: Optional[str] = Field("sample-hack-2026", description="Associated hackathon slug")
     featured: bool = Field(False, description="Whether project is featured in gallery")
+    status: Optional[str] = Field("submitted", description="Submission state: 'draft' or 'submitted'")
 
 class ProjectCreate(ProjectBase):
     id: Optional[str] = None
@@ -33,6 +34,7 @@ class ProjectUpdate(BaseModel):
     solution: Optional[str] = None
     technologies: Optional[List[str]] = None
     featured: Optional[bool] = None
+    status: Optional[str] = None
 
 class ProjectOut(ProjectBase):
     id: str

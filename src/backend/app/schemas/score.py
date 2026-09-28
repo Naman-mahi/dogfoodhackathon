@@ -19,6 +19,9 @@ class ScoreOut(ScoreBase):
 
 class CalibratedRankOut(BaseModel):
     project_id: str
+    project_title: Optional[str] = None
+    team: Optional[str] = None
+    track: Optional[str] = None
     review_count: int
     raw_mean: float
     calibrated_score: float
@@ -28,3 +31,6 @@ class CalibrationResultOut(BaseModel):
     global_prior_mean: float
     shrinkage_k: float
     rankings: List[CalibratedRankOut]
+    hackathon_id: Optional[str] = None
+    hackathon_name: Optional[str] = None
+    available_hackathons: Optional[List[Dict[str, Any]]] = None

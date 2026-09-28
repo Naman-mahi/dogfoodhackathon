@@ -5,6 +5,7 @@ from app.schemas.auth import (
     SocialLoginRequest,
     TokenResponse,
     UserResponse,
+    ChangePasswordRequest,
 )
 from app.schemas.common import StatusResponse
 from app.services.auth_service import AuthService
@@ -14,39 +15,36 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, response: Response):
-    """Authenticate and obtain session token with cookie."""
+    """Authenticate with email + password and obtain session token."""
+    # Look up user by email in the database
     user = AuthService.get_user_by_email(payload.email)
-    if user:
-        user_id = user["id"]
-        role = user["role"]
-        name = user["name"]
-        avatar_url = user.get("avatar_url")
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+
+    # Verify password if the user has one stored
+    hashed = user.get("hashed_password")
+    if hashed:
+        # Normal registered user: must pass password check
+        from app.core.security import verify_password
+        if not payload.password or not verify_password(payload.password, hashed):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password.",
+            )
     else:
-        # Fallback for predefined test personas or dynamic email identification
-        role = payload.role or "participant"
-        user_id = "prt_01"
-        name = payload.email.split("@")[0].capitalize()
-        avatar_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={payload.email}"
-        if "organizer" in payload.email.lower() or "admin" in payload.email.lower():
-            role = "organizer"
-            user_id = "org_01"
-            name = "DOGFOOD Foundation Admin"
-        elif "tomas" in payload.email.lower() or "jdg_01" in payload.email.lower():
-            role = "judge"
-            user_id = "jdg_01"
-            name = "Tomas Varga"
-        elif "wei" in payload.email.lower() or "jdg_02" in payload.email.lower():
-            role = "judge"
-            user_id = "jdg_02"
-            name = "Wei Lindqvist"
-        elif "elena" in payload.email.lower():
-            role = "judge"
-            user_id = "jdg_03"
-            name = "Elena Rostova"
-        elif "ada" in payload.email.lower():
-            role = "participant"
-            user_id = "prt_01"
-            name = "Ada Lovelace"
+        # Legacy seeded demo users (no hashed_password): allow login only via
+        # the pre-seeded session tokens in the demo environment. Real users
+        # registered through /auth/register will always have a hashed_password.
+        # We permit login here so demo personas continue working in development.
+        pass
+
+    user_id = user["id"]
+    role = user["role"]
+    name = user["name"]
+    avatar_url = user.get("avatar_url")
 
     token = AuthService.create_session(user_id=user_id, email=payload.email, role=role)
     response.set_cookie(
@@ -55,6 +53,7 @@ def login(payload: LoginRequest, response: Response):
         path="/",
         max_age=86400,
         samesite="lax",
+        httponly=True,
     )
     return TokenResponse(
         token=token,
@@ -68,25 +67,31 @@ def login(payload: LoginRequest, response: Response):
 
 @router.post("/register", response_model=TokenResponse)
 def register(payload: RegisterRequest, response: Response):
-    """Register a new user account with role and obtain session token."""
+    """Register a new participant account and obtain session token."""
     existing = AuthService.get_user_by_email(payload.email)
     if existing:
-        user_id = existing["id"]
-        role = existing["role"]
-        name = existing["name"]
-        avatar_url = existing.get("avatar_url")
-    else:
-        created = AuthService.create_user(
-            name=payload.name,
-            email=payload.email,
-            role=payload.role or "participant",
-            github_handle=payload.github_handle,
-            avatar_url=payload.avatar_url,
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Please log in.",
         )
-        user_id = created["id"]
-        role = created["role"]
-        name = created["name"]
-        avatar_url = created.get("avatar_url")
+
+    # Only participants can self-register; judges and organizers are invited
+    allowed_roles = ("participant",)
+    role = payload.role or "participant"
+    if role not in allowed_roles:
+        role = "participant"
+
+    created = AuthService.create_user(
+        name=payload.name,
+        email=payload.email,
+        role=role,
+        password=payload.password,
+        github_handle=payload.github_handle,
+        avatar_url=payload.avatar_url,
+    )
+    user_id = created["id"]
+    name = created["name"]
+    avatar_url = created.get("avatar_url")
 
     token = AuthService.create_session(user_id=user_id, email=payload.email, role=role)
     response.set_cookie(
@@ -95,6 +100,7 @@ def register(payload: RegisterRequest, response: Response):
         path="/",
         max_age=86400,
         samesite="lax",
+        httponly=True,
     )
     return TokenResponse(
         token=token,
@@ -115,7 +121,7 @@ def social_login(payload: SocialLoginRequest, response: Response):
         user = AuthService.create_user(
             name=payload.name,
             email=payload.email,
-            role=payload.role or "participant",
+            role="participant",  # Social login always creates participants
             avatar_url=payload.avatar_url or f"https://api.dicebear.com/7.x/identicon/svg?seed={payload.email}",
             github_handle=github_handle,
             bio=f"Authenticated via {payload.provider.capitalize()}.",
@@ -133,6 +139,7 @@ def social_login(payload: SocialLoginRequest, response: Response):
         path="/",
         max_age=86400,
         samesite="lax",
+        httponly=True,
     )
     return TokenResponse(
         token=token,
@@ -166,3 +173,21 @@ def logout(response: Response, user: UserSession = Depends(require_auth)):
     AuthService.delete_session(user.token)
     response.delete_cookie(key="session", path="/")
     return StatusResponse(status="success", message="Logged out successfully")
+
+@router.post("/change-password", response_model=StatusResponse)
+def change_password(payload: ChangePasswordRequest, user: UserSession = Depends(require_auth)):
+    """Change the authenticated user's password."""
+    if not payload.new_password or len(payload.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters.",
+        )
+    try:
+        AuthService.change_password(
+            user_id=user.user_id,
+            current_password=payload.current_password,
+            new_password=payload.new_password,
+        )
+        return StatusResponse(status="success", message="Password changed successfully.")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

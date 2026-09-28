@@ -1,6 +1,19 @@
 """Static reference dataset matching src/frontend/lib/mockData.ts for PostgreSQL database seeding."""
 
+# Pre-computed bcrypt hash for 'demo2026' — all demo personas share this password.
+_DEMO_PW_HASH = "$2b$12$e7YsBGY.RlJbrz3QIqsptOB3qd31eJSPDShERgRSOP153MtWfKUNi"
+
 MOCK_USERS = [
+    {
+        "id": "adm_01",
+        "email": "admin@dogfood.internal",
+        "name": "DOGFOOD System Administrator",
+        "role": "admin",
+        "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=admin_01",
+        "bio": "Principal platform administrator with global root privileges.",
+        "github_handle": "dogfood-root",
+        "hashed_password": _DEMO_PW_HASH,
+    },
     {
         "id": "org_01",
         "email": "organizer@dogfood.dev",
@@ -9,6 +22,7 @@ MOCK_USERS = [
         "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=org_01",
         "bio": "Lead administrator for autonomous offline hackathon evaluations.",
         "github_handle": "dogfood-admin",
+        "hashed_password": _DEMO_PW_HASH,
     },
     {
         "id": "jdg_01",
@@ -18,6 +32,7 @@ MOCK_USERS = [
         "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=tomas",
         "bio": "Principal Systems Engineer specializing in distributed developer infrastructure.",
         "github_handle": "tomas-varga",
+        "hashed_password": _DEMO_PW_HASH,
     },
     {
         "id": "jdg_02",
@@ -27,6 +42,7 @@ MOCK_USERS = [
         "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=wei",
         "bio": "Distributed systems researcher focusing on calibration and ranking variance.",
         "github_handle": "wei-lindqvist",
+        "hashed_password": _DEMO_PW_HASH,
     },
     {
         "id": "jdg_03",
@@ -36,6 +52,7 @@ MOCK_USERS = [
         "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=elena",
         "bio": "Cryptography engineer working on zero-trust evaluation pipelines.",
         "github_handle": "elena-crypto",
+        "hashed_password": _DEMO_PW_HASH,
     },
     {
         "id": "prt_01",
@@ -45,8 +62,10 @@ MOCK_USERS = [
         "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=ada",
         "bio": "Builder & full-stack architect enthusiastic about decentralized systems.",
         "github_handle": "ada-lovelace",
+        "hashed_password": _DEMO_PW_HASH,
     },
 ]
+
 
 MOCK_HACKATHONS = [
     {

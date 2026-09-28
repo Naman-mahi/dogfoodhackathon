@@ -137,6 +137,12 @@ export interface Project {
   hackathonSlug: string;
   likesCount: number;
   featured?: boolean;
+  status?: string;
+  repo_url?: string;
+  demo_url?: string;
+  team_name?: string;
+  teamName?: string;
+  description?: string;
 }
 
 export const HACKATHONS_DATA: Hackathon[] = [

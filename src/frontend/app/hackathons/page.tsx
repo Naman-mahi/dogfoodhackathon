@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { HACKATHONS_DATA } from "@/lib/mockData";
 import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, isEventRegistrationOpen, Hackathon } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 
@@ -27,11 +26,11 @@ export default function HackathonsPage() {
     // 1. Fetch live events from backend
     fetchEvents()
       .then((evs) => {
-        if (evs && evs.length > 0) setHackathonsList(evs);
+        setHackathonsList(evs || []);
       })
       .catch((err) => {
-        console.warn("Using fallback hackathons data:", err);
-        setHackathonsList(HACKATHONS_DATA);
+        console.error("Failed to load live hackathons:", err);
+        setHackathonsList([]);
       })
       .finally(() => setLoadingEvents(false));
 

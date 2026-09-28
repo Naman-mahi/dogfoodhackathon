@@ -34,6 +34,15 @@ def update_judge(judge_id: str, payload: JudgeUpdate, user: UserSession = Depend
         raise NotFoundException(f"Judge '{judge_id}' not found")
     return JudgingService.update_judge(judge_id, payload)
 
+@router.post("/auto-assign")
+def auto_assign_judges(
+    event_id: str = "evt_01",
+    judges_per_track: int = 2,
+    user: UserSession = Depends(require_organizer),
+):
+    """Algorithmic round-robin distribution of judges across all event tracks."""
+    return JudgingService.auto_assign_judges_round_robin(event_id=event_id, judges_per_track=judges_per_track)
+
 @router.delete("/{judge_id}", response_model=StatusResponse)
 def delete_judge(judge_id: str, user: UserSession = Depends(require_organizer)):
     """Remove a judge (restricted to organizers)."""

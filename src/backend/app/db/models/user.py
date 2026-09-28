@@ -23,4 +23,5 @@ sessions_table = Table(
     Column("user_id", String(64), nullable=False),
     Column("user_email", String(255), nullable=False),
     Column("created_at", DateTime(timezone=True), server_default=func.now()),
+    Column("expires_at", DateTime(timezone=True), nullable=True),
 )

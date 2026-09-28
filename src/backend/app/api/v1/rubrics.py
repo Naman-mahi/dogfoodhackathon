@@ -15,3 +15,12 @@ def list_rubrics(event_id: str = Query("evt_01", description="Event ID")):
 def create_rubric(payload: RubricCreate, user: UserSession = Depends(require_organizer)):
     """Define a new evaluation rubric with weight (restricted to organizers)."""
     return JudgingService.create_rubric(payload)
+
+@router.put("/{rubric_id}", response_model=RubricOut)
+def update_rubric(rubric_id: int, payload: RubricUpdate, user: UserSession = Depends(require_organizer)):
+    """Update an existing evaluation rubric (restricted to organizers)."""
+    updated = JudgingService.update_rubric(rubric_id, payload)
+    if not updated:
+        from app.core.exceptions import NotFoundException
+        raise NotFoundException(f"Rubric {rubric_id} not found")
+    return updated

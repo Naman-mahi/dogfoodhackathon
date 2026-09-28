@@ -51,7 +51,7 @@ export default function NewEventPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] border border-slate-200 rounded-3xl overflow-hidden bg-slate-50/50 shadow-sm m-2 sm:m-4">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50/30">
       {/* Reusable Organizer Sidebar — "Create Hackathon" item highlighted via pathname */}
       <DashboardSidebar
         role="organizer"

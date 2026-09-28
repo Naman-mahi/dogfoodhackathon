@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.schemas.score import ScoreCreate, ScoreOut
 from app.services.judging_service import JudgingService
-from app.api.deps import require_judge, UserSession
+from app.api.deps import require_auth, require_judge, UserSession
 from app.core.exceptions import PeerIsolationViolationException, ForbiddenException
 
 router = APIRouter(prefix="/judge/scores", tags=["Judging & Scores"])
@@ -10,13 +10,14 @@ router = APIRouter(prefix="/judge/scores", tags=["Judging & Scores"])
 @router.get("", response_model=List[ScoreOut])
 def get_judge_scores(
     judge: Optional[str] = Query(None, description="Target judge ID to inspect"),
-    user: UserSession = Depends(require_judge),
+    user: UserSession = Depends(require_auth),
 ):
     """
-    Returns scores for the authenticated judge.
-    Enforces zero-trust peer isolation:
-    Attempts to read another judge's scores return HTTP 403.
+    Returns scores for the authenticated judge or (for organizers) any specified judge.
+    Enforces zero-trust peer isolation: judges cannot see each other's scores.
     """
+    if user.role not in ("judge", "organizer"):
+        raise ForbiddenException("Forbidden: Evaluator or Organizer credentials required")
     is_org = user.role == "organizer"
     return JudgingService.get_scores_for_judge(
         authenticated_judge_id=user.user_id,
@@ -28,3 +29,4 @@ def get_judge_scores(
 def submit_score(payload: ScoreCreate, user: UserSession = Depends(require_judge)):
     """Submit double-blind evaluation rating and rubric scores."""
     return JudgingService.create_score(payload, judge_id=user.user_id)
+

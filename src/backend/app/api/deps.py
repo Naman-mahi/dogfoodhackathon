@@ -1,15 +1,16 @@
 from typing import Optional
 from fastapi import Request, Depends
 from app.services.auth_service import AuthService
-from app.core.permissions import Role, is_organizer, is_judge, is_participant
+from app.core.permissions import Role, is_admin, is_organizer, is_judge, is_participant
 from app.core.exceptions import UnauthorizedException, ForbiddenException
 
 class UserSession:
-    def __init__(self, token: str, role: str, user_id: str, email: str):
+    def __init__(self, token: str, role: str, user_id: str, email: str, name: Optional[str] = None):
         self.token = token
         self.role = role
         self.user_id = user_id
         self.email = email
+        self.name = name or (email.split("@")[0] if email else "User")
 
 def get_current_user(request: Request) -> Optional[UserSession]:
     token = None
@@ -34,11 +35,14 @@ def get_current_user(request: Request) -> Optional[UserSession]:
 
     row = AuthService.get_session_user(token)
     if row:
+        user_row = AuthService.get_user_by_id(row.user_id) if row.user_id else None
+        name = user_row.get("name") if user_row else None
         return UserSession(
             token=row.token,
             role=row.role,
             user_id=row.user_id,
             email=row.user_email,
+            name=name,
         )
     return None
 
@@ -60,4 +64,9 @@ def require_judge(user: UserSession = Depends(require_auth)) -> UserSession:
 def require_participant(user: UserSession = Depends(require_auth)) -> UserSession:
     if not is_participant(user.role):
         raise ForbiddenException("Forbidden: Participant role required")
+    return user
+
+def require_admin(user: UserSession = Depends(require_auth)) -> UserSession:
+    if not is_admin(user.role):
+        raise ForbiddenException("Forbidden: Administrator role required")
     return user

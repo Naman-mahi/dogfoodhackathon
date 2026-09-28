@@ -81,12 +81,21 @@ class EventService:
             stmt = stmt.order_by(events_table.c.created_at.desc())
             rows = conn.execute(stmt).mappings().fetchall()
 
+            if not rows:
+                return []
+
+            # Batch-load all tracks in ONE query (fixes N+1)
+            event_ids = [r["id"] for r in rows]
+            trk_stmt = select(tracks_table).where(tracks_table.c.event_id.in_(event_ids))
+            all_tracks = conn.execute(trk_stmt).mappings().fetchall()
+            tracks_by_event: dict = {}
+            for t in all_tracks:
+                tracks_by_event.setdefault(t["event_id"], []).append(dict(t))
+
             result = []
             for r in rows:
                 ev_dict = dict(r)
-                # fetch tracks for event
-                trk_stmt = select(tracks_table).where(tracks_table.c.event_id == r["id"])
-                ev_dict["tracks"] = [dict(t) for t in conn.execute(trk_stmt).mappings().fetchall()]
+                ev_dict["tracks"] = tracks_by_event.get(r["id"], [])
                 is_open, closed_reason, deadline_dt = EventService.check_registration_open(ev_dict)
                 ev_dict["is_registration_open"] = is_open
                 ev_dict["registration_closed_reason"] = closed_reason

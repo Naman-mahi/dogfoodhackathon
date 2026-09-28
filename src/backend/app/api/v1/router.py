@@ -9,6 +9,7 @@ from app.api.v1.rubrics import router as rubrics_router
 from app.api.v1.scores import router as scores_router
 from app.api.v1.results import router as results_router
 from app.api.v1.admin import router as admin_router
+from app.api.v1.certificates import router as certificates_router
 
 api_v1_router = APIRouter()
 
@@ -22,6 +23,7 @@ api_v1_router.include_router(rubrics_router)
 api_v1_router.include_router(scores_router)
 api_v1_router.include_router(results_router)
 api_v1_router.include_router(admin_router)
+api_v1_router.include_router(certificates_router)
 
 # Provide clean REST alias for /hackathons -> /events
 hackathons_router = APIRouter(prefix="/hackathons", tags=["Hackathons"])

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   Calendar,
   CheckCircle2,
@@ -40,6 +41,20 @@ export default function CreateEventWizard() {
   }, [searchParams]);
 
   const changeStep = (nextStep: number) => {
+    if (nextStep > step) {
+      if (step === 1 && !eventData.name.trim()) {
+        toast.error("Please enter a valid hackathon name.");
+        return;
+      }
+      if (step === 2 && new Date(eventData.end_date) <= new Date(eventData.start_date)) {
+        toast.error("Hackathon end date must be after the start date.");
+        return;
+      }
+      if (step === 3 && eventData.tracks.length === 0) {
+        toast.error("At least one competition track is required.");
+        return;
+      }
+    }
     const clamped = Math.min(Math.max(1, nextStep), 5);
     setStep(clamped);
     router.push(`/events/new?step=${clamped}`);
@@ -110,6 +125,7 @@ export default function CreateEventWizard() {
         { id: `trk_${Math.random().toString(36).slice(2, 10)}`, name: `New Innovation Track ${prev.tracks.length + 1}`, prize: "$10,000" },
       ],
     }));
+    toast.success("Competition track added.");
   };
 
   const handleRemoveTrack = (index: number) => {
@@ -117,6 +133,7 @@ export default function CreateEventWizard() {
       ...prev,
       tracks: prev.tracks.filter((_, i) => i !== index),
     }));
+    toast.success("Track removed.");
   };
 
   const handleTrackChange = (index: number, field: string, value: string) => {
@@ -135,6 +152,7 @@ export default function CreateEventWizard() {
         { title: "New Evaluation Criterion", weight: "20%", description: "Clear standard for assessment." },
       ],
     }));
+    toast.success("Evaluation criterion added.");
   };
 
   const handleRemoveRubric = (index: number) => {
@@ -142,6 +160,7 @@ export default function CreateEventWizard() {
       ...prev,
       rubrics: prev.rubrics.filter((_, i) => i !== index),
     }));
+    toast.success("Evaluation criterion removed.");
   };
 
   const handleRubricChange = (index: number, field: string, value: string) => {
@@ -206,77 +225,81 @@ export default function CreateEventWizard() {
         throw new Error(err.detail || "Failed to publish event.");
       }
 
-      setSuccessMsg(`Hackathon "${eventData.name}" created and published successfully!`);
+      const msg = `Hackathon "${eventData.name}" created and published successfully!`;
+      setSuccessMsg(msg);
+      toast.success(msg);
       setTimeout(() => {
         router.push("/hackathons");
       }, 1500);
     } catch (e: any) {
-      setErrorMsg(e.message || "Failed to create event.");
+      const err = e.message || "Failed to create event.";
+      setErrorMsg(err);
+      toast.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Real-time Dynamic KPI Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 bg-white text-slate-800 rounded-2xl shadow-xs border border-slate-200">
         <div className="space-y-0.5">
-          <div className="text-[10px] uppercase font-bold text-purple-400 tracking-wider flex items-center gap-1">
+          <div className="text-[10px] uppercase font-bold text-purple-600 tracking-wider flex items-center gap-1">
             <DollarSign className="w-3 h-3" /> Prize Budget
           </div>
-          <div className="text-base sm:text-lg font-black text-white font-mono">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
             ${effectivePrizePool.toLocaleString()}
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] text-slate-500">
             {eventData.tracks.length} active tracks
           </div>
         </div>
 
         <div className="space-y-0.5">
-          <div className="text-[10px] uppercase font-bold text-blue-400 tracking-wider flex items-center gap-1">
+          <div className="text-[10px] uppercase font-bold text-blue-600 tracking-wider flex items-center gap-1">
             <Users className="w-3 h-3" /> Projected Capacity
           </div>
-          <div className="text-base sm:text-lg font-black text-white font-mono">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
             {projectedParticipants}
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] text-slate-500">
             ~{projectedTeams} squads ({maxTeamMembers}/team)
           </div>
         </div>
 
         <div className="space-y-0.5">
-          <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1">
+          <div className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider flex items-center gap-1">
             <Clock className="w-3 h-3" /> Sprint Duration
           </div>
-          <div className="text-base sm:text-lg font-black text-white font-mono">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
             {sprintDurationDays}d
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] text-slate-500">
             {sprintDurationHours} active build hrs
           </div>
         </div>
 
         <div className="space-y-0.5">
-          <div className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+          <div className="text-[10px] uppercase font-bold text-amber-600 tracking-wider flex items-center gap-1">
             <ShieldCheck className="w-3 h-3" /> Review Window
           </div>
-          <div className="text-base sm:text-lg font-black text-white font-mono">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
             {reviewWindowHours}h
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] text-slate-500">
             Post-lock evaluation
           </div>
         </div>
 
         <div className="space-y-0.5 col-span-2 sm:col-span-1">
-          <div className="text-[10px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+          <div className="text-[10px] uppercase font-bold text-rose-600 tracking-wider flex items-center gap-1">
             <TrendingUp className="w-3 h-3" /> Review Capacity
           </div>
-          <div className="text-base sm:text-lg font-black text-white font-mono">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
             {judgesNeeded} Judges
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] text-slate-500">
             3x peer isolation redundancy
           </div>
         </div>

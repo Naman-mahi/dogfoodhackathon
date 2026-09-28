@@ -25,6 +25,15 @@ from app.services.normalization_service import NormalizationService
 from app.services.export_service import ExportService
 from app.services.project_service import ProjectService
 from app.schemas.project import ProjectCreate
+from app.core.rate_limit import limiter
+try:
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.middleware import SlowAPIMiddleware
+except ImportError:
+    RateLimitExceeded = None
+    _rate_limit_exceeded_handler = None
+    SlowAPIMiddleware = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,17 +50,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Allowed origins: portal on 8080 (dev), production domain if set
+_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    os.getenv("PORTAL_ORIGIN", "http://localhost:8080"),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount modular REST APIs on /api/v1 and /api
+if SlowAPIMiddleware and RateLimitExceeded:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
+# Mount modular REST APIs on /api/v1 only
 app.include_router(api_v1_router, prefix="/api/v1")
-app.include_router(api_v1_router, prefix="/api")
 
 # Request bodies for compatibility endpoints
 class ProjectSubmission(BaseModel):
@@ -65,7 +85,8 @@ class VotePayload(BaseModel):
     fingerprint: Optional[str] = None
 
 class CommentPayload(BaseModel):
-    author: str = Field(..., description="Author name")
+    author: Optional[str] = None
+    author_name: Optional[str] = None
     content: str = Field(..., description="Review comment content")
 
 class WebhookPayload(BaseModel):
@@ -165,22 +186,26 @@ def get_calibrated_rankings_compat(user: UserSession = Depends(require_auth)):
     return NormalizationService.calculate_empirical_bayes()
 
 @app.post("/api/projects/{project_id}/vote", tags=["Community"])
-def cast_community_vote(project_id: str, request: Request, payload: VotePayload):
-    client_ip = request.client.host if request.client else "unknown"
-    fingerprint = payload.fingerprint or hashlib.sha256(f"{client_ip}-{request.headers.get('user-agent', '')}".encode()).hexdigest()
+def cast_community_vote(
+    project_id: str,
+    request: Request,
+    payload: VotePayload,
+    user: UserSession = Depends(require_auth),
+):
+    user_fingerprint = f"user:{user.user_id}"
 
     with engine.connect() as conn:
         stmt = select(votes_table).where(
             votes_table.c.project_id == project_id,
-            votes_table.c.voter_fingerprint == fingerprint,
+            votes_table.c.voter_fingerprint == user_fingerprint,
         )
         existing = conn.execute(stmt).first()
         if existing:
-            raise HTTPException(status_code=429, detail="Duplicate vote detected. Each participant may vote once per project.")
+            raise HTTPException(status_code=429, detail="Duplicate vote detected. You have already voted for this project.")
 
         ins = insert(votes_table).values(
             project_id=project_id,
-            voter_fingerprint=fingerprint,
+            voter_fingerprint=user_fingerprint,
             created_at=datetime.now(timezone.utc),
         )
         conn.execute(ins)
@@ -196,17 +221,22 @@ def get_project_votes(project_id: str):
         return {"project_id": project_id, "vote_count": count}
 
 @app.post("/api/projects/{project_id}/comments", tags=["Community"])
-def add_comment(project_id: str, payload: CommentPayload):
+def add_comment(
+    project_id: str,
+    payload: CommentPayload,
+    user: UserSession = Depends(require_auth),
+):
+    author = getattr(user, "name", None) or getattr(user, "email", None) or payload.author or payload.author_name or "Peer Reviewer"
     with engine.connect() as conn:
         ins = insert(comments_table).values(
             project_id=project_id,
-            author_name=payload.author,
+            author_name=author,
             content=payload.content,
             created_at=datetime.now(timezone.utc),
         )
         conn.execute(ins)
         conn.commit()
-    return {"status": "created"}
+    return {"status": "created", "author": author}
 
 @app.get("/api/projects/{project_id}/comments", tags=["Community"])
 def get_comments(project_id: str):
@@ -245,15 +275,18 @@ def register_webhook(payload: WebhookPayload, user: UserSession = Depends(requir
     return {"id": wh_id, "secret": secret, "target_url": payload.target_url}
 
 @app.get("/api/certificates/{project_id}", tags=["Admin"])
-def get_certificate(project_id: str):
+def get_certificate(project_id: str, user: UserSession = Depends(require_auth)):
+    """Fetch a certificate for a completed project. Requires authentication."""
     with engine.connect() as conn:
         stmt = select(projects_table).where(projects_table.c.id == project_id)
         proj = conn.execute(stmt).first()
         if not proj:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        payload = f"{proj.id}:{proj.title}:{proj.team}:{proj.submitted_at.isoformat() if proj.submitted_at else ''}"
-        signature = hmac.new(settings.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        # Use the canonical payload format consistent with /api/v1/admin/certificates
+        from app.core.security import generate_certificate_signature
+        payload = f"CERT:{proj.id}:{proj.title}:{proj.team}"
+        signature = generate_certificate_signature(payload)
 
         return {
             "certificate_id": f"CERT-{proj.id.upper()}",

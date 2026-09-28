@@ -27,6 +27,7 @@ import {
   X,
   Layers,
   ChevronDown,
+  Shuffle,
 } from "lucide-react";
 import { AuthUser } from "../../lib/auth";
 import DashboardSidebar, { ORGANIZER_NAV } from "../../components/DashboardSidebar";
@@ -42,7 +43,7 @@ import {
   JudgeData,
   Project,
 } from "../../lib/api";
-import { Hackathon } from "../../lib/mockData";
+import { Hackathon } from "../../lib/types";
 import DataTable, { ColumnDef } from "../../components/DataTable";
 
 export type OrganizerTab =
@@ -120,6 +121,28 @@ export default function OrganizerDashboard({
       toast.error("Failed to load judges list.");
     } finally {
       setJudgesLoading(false);
+    }
+  };
+
+  const [autoAssigning, setAutoAssigning] = useState(false);
+  const handleAutoAssign = async () => {
+    if (!activeHackathon) return;
+    setAutoAssigning(true);
+    try {
+      const res = await fetch(`/api/v1/judges/auto-assign?event_id=${activeHackathon.id}&judges_per_track=2`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message || "Judges evenly distributed across tracks!");
+        await loadJudges();
+      } else {
+        toast.error("Failed to auto-assign judges.");
+      }
+    } catch {
+      toast.error("Network error while auto-assigning judges.");
+    } finally {
+      setAutoAssigning(false);
     }
   };
 
@@ -345,7 +368,7 @@ export default function OrganizerDashboard({
       render: (ev) => (
         <div className="flex items-center justify-end gap-1.5">
           <Link
-            href={`/events?slug=${ev.slug}&tab=manage`}
+            href={`/manage-events/${ev.slug}`}
             className="text-xs py-1 px-2.5 rounded-lg border border-purple-200 hover:bg-purple-50 text-purple-700 font-semibold flex items-center gap-1 transition-colors"
             title="Manage this hackathon"
           >
@@ -788,20 +811,33 @@ export default function OrganizerDashboard({
                 </p>
               </div>
 
-              {/* Hackathon Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-600">Select Hackathon:</span>
-                <select
-                  value={selectedHackathonSlug}
-                  onChange={(e) => setSelectedHackathonSlug(e.target.value)}
-                  className="input-field text-xs py-1.5 px-3 bg-white font-bold text-slate-800 border-slate-300"
+              {/* Actions & Hackathon Selector */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">Select Hackathon:</span>
+                  <select
+                    value={selectedHackathonSlug}
+                    onChange={(e) => setSelectedHackathonSlug(e.target.value)}
+                    className="input-field text-xs py-1.5 px-3 bg-white font-bold text-slate-800 border-slate-300"
+                  >
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.slug || ev.id}>
+                        {ev.title || ev.name} ({ev.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAutoAssign}
+                  disabled={autoAssigning || !activeHackathon}
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200 font-bold"
+                  title="Fairly balance judges across all tracks in round-robin fashion"
                 >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.slug || ev.id}>
-                      {ev.title || ev.name} ({ev.id})
-                    </option>
-                  ))}
-                </select>
+                  <Shuffle className={`w-3.5 h-3.5 ${autoAssigning ? "animate-spin" : ""}`} />
+                  {autoAssigning ? "Balancing Tracks..." : "Auto-Distribute Judges"}
+                </button>
               </div>
             </div>
 

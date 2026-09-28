@@ -2,6 +2,7 @@
 
 export interface AuthUser {
   user_id: string;
+  id?: string;
   email: string;
   name: string;
   role: "organizer" | "judge" | "participant" | string;
@@ -16,47 +17,44 @@ export const TEST_PERSONAS: Record<string, {
   email: string;
   password: string;
   role: "organizer" | "judge" | "participant";
-  session: string;
   description: string;
   badge: string;
 }> = {
   organizer: {
     name: "DOGFOOD Admin",
     email: "organizer@dogfood.dev",
-    password: "Password123!",
+    password: "demo2026",
     role: "organizer",
-    session: "org_7f2a",
     description: "Manage events, rubric weights, inspect judge progress, export CSV",
     badge: "Organizer",
   },
   judge_a: {
     name: "Tomas Varga (Judge A)",
     email: "tomas.varga@example.org",
-    password: "Password123!",
+    password: "demo2026",
     role: "judge",
-    session: "jdg_a_91bc",
     description: "Evaluate track submissions blindly with isolated rubrics",
     badge: "Judge A",
   },
   judge_b: {
     name: "Wei Lindqvist (Judge B)",
     email: "wei.lindqvist@example.org",
-    password: "Password123!",
+    password: "demo2026",
     role: "judge",
-    session: "jdg_b_44de",
     description: "Evaluate peer submissions blindly without cross-judge visibility",
     badge: "Judge B",
   },
   participant: {
     name: "Ada Lovelace",
     email: "ada@example.org",
-    password: "Password123!",
+    password: "demo2026",
     role: "participant",
-    session: "prt_2e88",
     description: "Manage team projects, edit details, track likes & submission status",
     badge: "Participant",
   },
 };
+
+// ─── Cookie helpers ───────────────────────────────────────────────────────────
 
 export function setSessionCookie(token: string) {
   if (typeof document !== "undefined") {
@@ -69,6 +67,8 @@ export function clearSessionCookie() {
     document.cookie = "session=; path=/; max-age=0; SameSite=Lax";
   }
 }
+
+// ─── LocalStorage helpers (non-sensitive display data only) ──────────────────
 
 export function getStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
@@ -83,9 +83,12 @@ export function getStoredUser(): AuthUser | null {
 
 export function saveStoredUser(user: AuthUser) {
   if (typeof window === "undefined") return;
-  localStorage.setItem("dogfood_user", JSON.stringify(user));
-  if (user.token) {
-    setSessionCookie(user.token);
+  // Store only display-safe data in localStorage (no sensitive tokens)
+  const { token, ...displayData } = user;
+  localStorage.setItem("dogfood_user", JSON.stringify(displayData));
+  // Token goes only into cookie (HttpOnly-safe via backend; client sets via JS for demo)
+  if (token) {
+    setSessionCookie(token);
   }
 }
 
@@ -98,16 +101,19 @@ export function updateStoredUser(updates: Partial<AuthUser>) {
   }
 }
 
-export async function loginWithCredentials(email: string, password?: string, role?: string): Promise<AuthUser> {
+// ─── Core Auth Functions (all hit the backend) ───────────────────────────────
+
+export async function loginWithCredentials(email: string, password: string): Promise<AuthUser> {
   const res = await fetch("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, role }),
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || "Authentication failed");
+    throw new Error(errorData.detail || "Authentication failed. Check your email and password.");
   }
 
   const data = await res.json();
@@ -117,7 +123,7 @@ export async function loginWithCredentials(email: string, password?: string, rol
     name: data.name || email.split("@")[0].toUpperCase(),
     role: data.role,
     avatar_url: data.avatar_url,
-    token: data.token,
+    token: data.token || data.access_token,
   };
 
   saveStoredUser(user);
@@ -134,6 +140,7 @@ export async function registerUser(payload: {
   const res = await fetch("/api/v1/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(payload),
   });
 
@@ -149,15 +156,18 @@ export async function registerUser(payload: {
     name: data.name || payload.name,
     role: data.role,
     avatar_url: data.avatar_url,
-    token: data.token,
+    token: data.token || data.access_token,
   };
 
   saveStoredUser(user);
   return user;
 }
 
-export async function socialLogin(provider: "google" | "github" | "linkedin", customRole?: string): Promise<AuthUser> {
-  // Generate realistic mock identity for the provider
+export async function socialLogin(
+  provider: "google" | "github" | "linkedin",
+  customRole?: string
+): Promise<AuthUser> {
+  // Generate realistic demo identity for the provider (demo environment only)
   const seed = Math.random().toString(36).substring(7);
   let name = "";
   let email = "";
@@ -176,6 +186,7 @@ export async function socialLogin(provider: "google" | "github" | "linkedin", cu
   const res = await fetch("/api/v1/auth/social", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({
       provider,
       email,
@@ -197,33 +208,35 @@ export async function socialLogin(provider: "google" | "github" | "linkedin", cu
     name: data.name || name,
     role: data.role,
     avatar_url: data.avatar_url,
-    token: data.token,
+    token: data.token || data.access_token,
   };
 
   saveStoredUser(user);
   return user;
 }
 
-export async function quickPersonaLogin(personaKey: "organizer" | "judge_a" | "judge_b" | "participant"): Promise<AuthUser> {
+/**
+ * Quick persona login — hits the REAL backend with the demo password.
+ * Replaced the old approach of directly setting hardcoded session tokens.
+ */
+export async function quickPersonaLogin(
+  personaKey: "organizer" | "judge_a" | "judge_b" | "participant"
+): Promise<AuthUser> {
   const p = TEST_PERSONAS[personaKey];
   if (!p) throw new Error("Unknown persona");
 
-  setSessionCookie(p.session);
-  const user: AuthUser = {
-    user_id: personaKey === "organizer" ? "org_01" : personaKey === "judge_a" ? "jdg_01" : personaKey === "judge_b" ? "jdg_02" : "prt_01",
-    email: p.email,
-    name: p.name,
-    role: p.role,
-    avatar_url: `https://api.dicebear.com/7.x/identicon/svg?seed=${p.email}`,
-    token: p.session,
-  };
-  saveStoredUser(user);
-  return user;
+  // Always hit the real auth endpoint — backend verifies bcrypt password
+  return loginWithCredentials(p.email, p.password);
 }
+
+// ─── Session verification ─────────────────────────────────────────────────────
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
-    const res = await fetch("/api/v1/auth/me");
+    const res = await fetch("/api/v1/auth/me", {
+      credentials: "include",
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     const data = await res.json();
     const user: AuthUser = {
@@ -243,7 +256,10 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
 
 export async function logoutUser(): Promise<void> {
   try {
-    await fetch("/api/v1/auth/logout", { method: "POST" });
+    await fetch("/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
   } catch {
     // Ignore network error during logout
   }

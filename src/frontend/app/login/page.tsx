@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   loginWithCredentials,
   quickPersonaLogin,
@@ -11,6 +12,7 @@ import {
   AuthUser,
 } from "../../lib/auth";
 import { ShieldCheck, UserCheck, Code, Award, CheckCircle2, AlertCircle } from "lucide-react";
+import SocialAuthModal from "@/components/forms/SocialAuthModal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,12 +34,16 @@ export default function LoginPage() {
 
     try {
       const user = await loginWithCredentials(email, password);
-      setSuccess(`Signed in as ${user.name} (${user.role})`);
+      const msg = `Signed in as ${user.name} (${user.role})`;
+      setSuccess(msg);
+      toast.success(`Welcome back, ${user.name}!`);
       setTimeout(() => {
         router.push("/dashboard");
       }, 500);
     } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please verify your credentials.");
+      const errText = err.message || "Failed to sign in. Please verify your credentials.";
+      setError(errText);
+      toast.error(errText);
     } finally {
       setLoading(false);
     }
@@ -48,12 +54,16 @@ export default function LoginPage() {
     setError(null);
     try {
       const user = await quickPersonaLogin(personaKey);
-      setSuccess(`Authenticated as ${user.name}`);
+      const msg = `Authenticated as ${user.name}`;
+      setSuccess(msg);
+      toast.success(`Switched persona: ${user.name} (${user.role})`);
       setTimeout(() => {
         router.push("/dashboard");
       }, 400);
     } catch (err: any) {
-      setError(err.message);
+      const errText = err.message || "Persona authentication failed.";
+      setError(errText);
+      toast.error(errText);
     } finally {
       setLoading(false);
     }
@@ -65,13 +75,17 @@ export default function LoginPage() {
     setError(null);
     try {
       const user = await socialLogin(socialModal, socialRole);
-      setSuccess(`Connected with ${socialModal.toUpperCase()} as ${user.name}`);
+      const msg = `Connected with ${socialModal.toUpperCase()} as ${user.name}`;
+      setSuccess(msg);
+      toast.success(msg);
       setSocialModal(null);
       setTimeout(() => {
         router.push("/dashboard");
       }, 400);
     } catch (err: any) {
-      setError(err.message);
+      const errText = err.message || "Social login failed.";
+      setError(errText);
+      toast.error(errText);
     } finally {
       setLoading(false);
     }
@@ -99,7 +113,7 @@ export default function LoginPage() {
               Instant 1-Click Test Personas
             </h2>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">Spec-Verified</span>
+          <span className="text-[10px] font-mono text-emerald-400">Verified via Backend →</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -276,7 +290,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="•••••••• (Default: Password123!)"
+              placeholder="•••••••• (Demo password: demo2026)"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -299,64 +313,16 @@ export default function LoginPage() {
       </div>
 
       {/* Social OAuth Modal */}
-      {socialModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card-modern max-w-sm w-full p-6 bg-white shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-slate-900 capitalize">
-              Connect with {socialModal}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Select your platform role to complete authentication via {socialModal.toUpperCase()}:
-            </p>
-
-            <div className="space-y-2">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase">Role</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSocialRole("participant")}
-                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
-                    socialRole === "participant"
-                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
-                      : "border-slate-200 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  Participant
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSocialRole("judge")}
-                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
-                    socialRole === "judge"
-                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
-                      : "border-slate-200 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  Judge
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setSocialModal(null)}
-                className="flex-1 btn-secondary text-xs py-2"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleConfirmSocial}
-                className="flex-1 btn-primary text-xs py-2"
-              >
-                {loading ? "Connecting..." : "Authorize"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SocialAuthModal
+        isOpen={Boolean(socialModal)}
+        provider={socialModal}
+        role={socialRole}
+        onRoleChange={setSocialRole}
+        onClose={() => setSocialModal(null)}
+        onConfirm={handleConfirmSocial}
+        loading={loading}
+        mode="login"
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Plus, X, AlertCircle, CheckCircle2, Loader2, GitBranch } from "lucide-react";
 import { submitProject } from "@/lib/api";
+import toast from "react-hot-toast";
 
 interface ProjectSubmissionModalProps {
   isOpen?: boolean;
@@ -65,9 +66,13 @@ export default function ProjectSubmissionModal({
     setLoading(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || "Failed to submit project.");
+      const err = res.error || "Failed to submit project.";
+      setErrorMsg(err);
+      toast.error(err);
     } else {
-      setSuccessMsg(`Project "${formData.title}" submitted successfully!`);
+      const msg = `Project "${formData.title}" submitted successfully!`;
+      setSuccessMsg(msg);
+      toast.success(msg);
       setTimeout(() => {
         setIsOpen(false);
         window.location.reload();

@@ -22,6 +22,7 @@ projects_table = Table(
     Column("demo_url", String(512), nullable=True),
     Column("likes_count", Integer, nullable=False, server_default="0"),
     Column("featured", Boolean, nullable=False, server_default="false"),
+    Column("status", String(32), nullable=False, server_default="submitted"),
     Column("submitted_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), server_default=func.now()),
 )

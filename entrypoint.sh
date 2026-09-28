@@ -12,19 +12,31 @@ if [ -f /app/.env ]; then
 fi
 
 echo "Starting local PostgreSQL daemon..."
+# If the mounted volume is empty, initialize the Postgres data dir first
+PG_DATA=/var/lib/postgresql/data
+PG_VERSION=$(ls /etc/postgresql/)
+if [ ! -f "$PG_DATA/PG_VERSION" ]; then
+  echo "Initializing PostgreSQL data directory in volume..."
+  chown -R postgres:postgres "$PG_DATA"
+  su - postgres -c "/usr/lib/postgresql/$PG_VERSION/bin/initdb -D $PG_DATA"
+  echo "listen_addresses='*'" >> "$PG_DATA/postgresql.conf"
+fi
+
 service postgresql start
 
-# Ensure postgres role and database exist
+# Ensure dogfood role and database exist (least-privilege: not SUPERUSER)
 su - postgres -c "psql" <<'EOF'
 DO $body$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'dogfood') THEN
-    CREATE ROLE dogfood WITH LOGIN PASSWORD 'dogfood' SUPERUSER;
+    CREATE ROLE dogfood WITH LOGIN PASSWORD 'dogfood';
   END IF;
 END
 $body$;
 SELECT 'CREATE DATABASE dogfood OWNER dogfood' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dogfood')\gexec
+GRANT ALL PRIVILEGES ON DATABASE dogfood TO dogfood;
 EOF
+
 
 echo "Initializing database & seeding fixtures..."
 cd /app/backend

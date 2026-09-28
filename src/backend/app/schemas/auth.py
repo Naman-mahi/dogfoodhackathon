@@ -38,3 +38,7 @@ class UserResponse(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None
     token: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str

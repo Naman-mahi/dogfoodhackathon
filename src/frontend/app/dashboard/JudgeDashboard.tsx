@@ -20,7 +20,7 @@ import {
 import { AuthUser } from "../../lib/auth";
 import DashboardSidebar, { JUDGE_NAV } from "../../components/DashboardSidebar";
 import DataTable, { ColumnDef } from "../../components/DataTable";
-import { fetchProjects, fetchJudgeScores, submitJudgeScore, Project, JudgeScoreRecord } from "../../lib/api";
+import { fetchProjects, fetchJudgeScores, fetchJudges, submitJudgeScore, Project, JudgeScoreRecord } from "../../lib/api";
 import toast from "react-hot-toast";
 
 interface JudgeDashboardProps {
@@ -60,6 +60,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
   const [testingIsolation, setTestingIsolation] = useState(false);
 
   const [projects, setProjects] = useState<JudgeProjectItem[]>([]);
+  const [judgeAssignedTracks, setJudgeAssignedTracks] = useState<string[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [searchFilter, setSearchFilter] = useState("");
   const [trackFilter, setTrackFilter] = useState("all");
@@ -67,17 +68,41 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
   const loadData = async () => {
     setLoadingProjects(true);
     try {
-      const [allProjects, myScores] = await Promise.all([
-        fetchProjects(),
+      const [allJudges, myScores] = await Promise.all([
+        fetchJudges(),
         fetchJudgeScores(),
       ]);
+
+      const currentUserId = (user as any)?.id || user?.user_id || "";
+      const judgeIdOrEmail = currentUserId || user?.email || "";
+      const matchedJudge = allJudges?.find(
+        (j) => (currentUserId && j.id === currentUserId) || j.email === user?.email || (user?.email && j.id === user.email.split("@")[0])
+      );
+      const assignedTracks: string[] = matchedJudge?.tracks || [];
+      setJudgeAssignedTracks(assignedTracks);
+
+      const allProjects = await fetchProjects({
+        judgeId: matchedJudge?.id || judgeIdOrEmail,
+      });
 
       const scoresMap = new Map<string, JudgeScoreRecord>();
       myScores.forEach((s) => {
         scoresMap.set(s.project, s);
       });
 
-      const mapped: JudgeProjectItem[] = allProjects.map((p) => {
+      // Filter: ONLY show assigned submissions matching the judge's assigned tracks OR already evaluated projects
+      const assignedProjects = assignedTracks.length > 0
+        ? allProjects.filter((p) => {
+            const hasScore = scoresMap.has(p.id) || scoresMap.has(p.slug);
+            const matchesTrack = assignedTracks.some(
+              (t) => (p.track && p.track.toLowerCase().includes(t.toLowerCase())) ||
+                     (p.trackLabel && p.trackLabel.toLowerCase().includes(t.toLowerCase()))
+            );
+            return matchesTrack || hasScore;
+          })
+        : allProjects;
+
+      const mapped: JudgeProjectItem[] = assignedProjects.map((p) => {
         const score = scoresMap.get(p.id) || scoresMap.get(p.slug);
         if (score) {
           const c = score.criteria || {};
@@ -122,7 +147,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const completedProjects = projects.filter((p) => p.scored);
   const completedCount = completedProjects.length;
@@ -267,14 +292,19 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
     try {
       const res = await fetch("/api/v1/judge/scores?judge=jdg_02", { credentials: "include" });
       if (res.status === 403 || res.status === 401) {
-        setPeerIsolationResult("VERIFIED: Backend strictly returned HTTP 403 Forbidden. Peer isolation is cryptographically enforced (Tier 2 verified).");
+        const text = "VERIFIED: Backend strictly returned HTTP 403 Forbidden. Peer isolation is cryptographically enforced (Tier 2 verified).";
+        setPeerIsolationResult(text);
+        toast.success("Peer score isolation strictly verified (HTTP 403 Forbidden).");
       } else if (res.status === 200) {
-        setPeerIsolationResult("WARNING: Endpoint returned 200 OK. Peer scores should be forbidden.");
+        const text = "WARNING: Endpoint returned 200 OK. Peer scores should be forbidden.";
+        setPeerIsolationResult(text);
+        toast.error("Warning: Peer scores endpoint returned 200 OK.");
       } else {
         setPeerIsolationResult(`Status: HTTP ${res.status}`);
       }
     } catch (e: any) {
       setPeerIsolationResult(`Request blocked: ${e.message}`);
+      toast.error(`Request blocked: ${e.message}`);
     } finally {
       setTestingIsolation(false);
     }
@@ -333,6 +363,25 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
                 {completedCount} / {projects.length} Completed
               </div>
             </div>
+
+            {judgeAssignedTracks.length > 0 && (
+              <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-purple-600" />
+                    Assigned Evaluation Tracks:
+                  </span>
+                  {judgeAssignedTracks.map((trk) => (
+                    <span key={trk} className="badge-pill bg-white text-purple-700 border border-purple-300 font-bold text-[11px]">
+                      {trk}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-slate-500 font-mono text-[11px]">
+                  Showing exclusively your assigned submissions ({projects.length} in queue)
+                </span>
+              </div>
+            )}
 
             {/* Filter & Search Bar */}
             <div className="flex flex-wrap items-center gap-3">

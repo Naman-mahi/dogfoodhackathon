@@ -1,7 +1,10 @@
-import { PROJECTS_DATA, HACKATHONS_DATA, Project, Hackathon } from "./mockData";
+// Types re-exported so consumers can import them from this module too
+export type { Hackathon, Project } from "./types";
+
+// Local aliases for use within this file
+import type { Hackathon, Project } from "./types";
 
 export type EventData = Hackathon;
-export type { Hackathon, Project };
 
 // Resolve API base URL based on environment (Server vs Client)
 function getApiBaseUrl(): string {
@@ -29,41 +32,59 @@ export interface ProjectSubmissionPayload {
   technologies?: string[];
   hackathon_id?: string;
   hackathon_slug?: string;
+  status?: string;
 }
 
 export interface CalibrationRanking {
   project_id: string;
   review_count: number;
+  project_title?: string;
+  team?: string;
+  track?: string;
   raw_mean: number;
   calibrated_score: number;
   shrinkage_delta: number;
+}
+
+export interface HackathonRef {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export interface CalibrationResponse {
   global_prior_mean: number;
   shrinkage_k: number;
   rankings: CalibrationRanking[];
+  hackathon_id?: string | null;
+  hackathon_name?: string | null;
+  available_hackathons?: HackathonRef[];
 }
 
 export async function fetchProjects(filters?: {
   track?: string;
   hackathon?: string;
+  eventId?: string;
   q?: string;
   featured?: boolean;
+  sort?: string;
+  judgeId?: string;
 }): Promise<Project[]> {
   try {
     const params = new URLSearchParams();
     if (filters?.track && filters.track !== "all") params.set("track", filters.track);
-    if (filters?.hackathon && filters.hackathon !== "all") params.set("hackathon", filters.hackathon);
+    const targetHackathon = filters?.hackathon || filters?.eventId;
+    if (targetHackathon && targetHackathon !== "all") params.set("hackathon", targetHackathon);
     if (filters?.q) params.set("search", filters.q);
     if (filters?.featured !== undefined) params.set("featured", String(filters.featured));
+    if (filters?.sort) params.set("sort", filters.sort);
+    if (filters?.judgeId) params.set("judge_id", filters.judgeId);
 
     const url = `${getApiBaseUrl()}/api/v1/projects?${params.toString()}`;
     const res = await fetch(url, { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        // Map backend schema to Project interface
         return data.map((p: any) => ({
           id: p.id,
           slug: p.slug || p.id,
@@ -82,28 +103,19 @@ export async function fetchProjects(filters?: {
           hackathonSlug: p.hackathon_slug || "sample-hack-2026",
           likesCount: p.likes_count || 0,
           featured: p.featured || false,
+          status: p.status || "submitted",
+          repo_url: p.repo_url,
+          demo_url: p.demo_url,
+          team_name: p.team,
+          teamName: p.team,
+          description: p.summary,
         }));
       }
     }
   } catch (err) {
-    console.warn("fetchProjects API fallback to mockData:", err);
+    console.warn("fetchProjects API error:", err);
   }
-
-  // Graceful fallback to static data
-  let result = [...PROJECTS_DATA];
-  if (filters?.track && filters.track !== "all") {
-    result = result.filter((p) => p.track === filters.track);
-  }
-  if (filters?.q) {
-    const q = filters.q.toLowerCase();
-    result = result.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.summary.toLowerCase().includes(q) ||
-        p.team.toLowerCase().includes(q)
-    );
-  }
-  return result;
+  return [];
 }
 
 export async function fetchProject(idOrSlug: string): Promise<Project | null> {
@@ -132,12 +144,9 @@ export async function fetchProject(idOrSlug: string): Promise<Project | null> {
       };
     }
   } catch (err) {
-    console.warn("fetchProject API fallback:", err);
+    console.warn("fetchProject API error:", err);
   }
-
-  return (
-    PROJECTS_DATA.find((p) => p.slug === idOrSlug || p.id === idOrSlug) || null
-  );
+  return null;
 }
 
 export function getAuthHeaders(): Record<string, string> {
@@ -146,11 +155,19 @@ export function getAuthHeaders(): Record<string, string> {
   };
   if (typeof window !== "undefined") {
     try {
+      // 1. Try reading token from stored user
       const u = localStorage.getItem("dogfood_user");
       if (u) {
         const parsed = JSON.parse(u);
         if (parsed.token) {
           headers["Authorization"] = `Bearer ${parsed.token}`;
+        }
+      }
+      // 2. Fallback: read session token from document.cookie
+      if (!headers["Authorization"]) {
+        const match = document.cookie.match(/(?:^|;\s*)session=([^;]+)/);
+        if (match && match[1]) {
+          headers["Authorization"] = `Bearer ${match[1]}`;
         }
       }
     } catch {}
@@ -440,37 +457,85 @@ export async function fetchMySubmission(eventIdOrSlug: string): Promise<Project 
   return null;
 }
 
-export async function likeProject(idOrSlug: string): Promise<number | null> {
+export async function likeProject(idOrSlug: string): Promise<{ success: boolean; likes_count?: number; status: number; error?: string }> {
   try {
-    const res = await fetch(`/api/v1/projects/${idOrSlug}/like`, { method: "POST" });
+    const headers = getAuthHeaders();
+    const res = await fetch(`/api/v1/projects/${idOrSlug}/like`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+    });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
-      return data.likes_count;
+      return { success: true, likes_count: data.likes_count, status: res.status };
     }
-  } catch (err) {
+    return {
+      success: false,
+      likes_count: data.likes_count,
+      status: res.status,
+      error: data.detail || "Could not record vote.",
+    };
+  } catch (err: any) {
     console.warn("likeProject failed:", err);
+    return { success: false, status: 500, error: err.message || "Network error" };
   }
-  return null;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string; error?: string; status: number }> {
+  try {
+    const headers = getAuthHeaders();
+    const res = await fetch("/api/v1/auth/change-password", {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return {
+        success: true,
+        message: data.message || "Password changed successfully",
+        status: res.status,
+      };
+    }
+    return {
+      success: false,
+      error: data.detail || "Failed to change password",
+      status: res.status,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "Network error while changing password",
+      status: 500,
+    };
+  }
 }
 
 export function formatEventObject(ev: any): Hackathon {
   return {
     ...ev,
     slug: ev.slug || ev.id,
-    startDate: ev.start_date || "2026-02-15T09:00:00Z",
-    endDate: ev.end_date || "2026-03-01T18:00:00Z",
-    registration_deadline: ev.registration_deadline || ev.submissions_close || ev.end_date,
-    registrationDeadline: ev.registration_deadline || ev.submissions_close || ev.end_date,
+    startDate: ev.start_date || null,
+    endDate: ev.end_date || null,
+    registration_deadline: ev.registration_deadline || ev.submissions_close || ev.end_date || null,
+    registrationDeadline: ev.registration_deadline || ev.submissions_close || ev.end_date || null,
     isRegistrationOpen: ev.is_registration_open ?? true,
     registrationClosedReason: ev.registration_closed_reason || null,
     timezone: ev.timezone || "UTC",
     isFree: ev.is_free ?? true,
     entryFeeDisplay: ev.entry_fee_display || "Free Entry",
-    prizeAmount: ev.prize_amount || 0,
-    prizeDisplay: ev.prize_display || "$25,000 USD",
-    participantCount: ev.participant_count || 1420,
-    submissionCount: ev.submission_count || 42,
-    deadlineDisplay: ev.deadline_display || "Closing soon",
+    prizeAmount: ev.prize_amount ?? 0,
+    prizeDisplay: ev.prize_display || null,
+    participantCount: ev.participant_count ?? 0,
+    submissionCount: ev.submission_count ?? 0,
+    deadlineDisplay: ev.deadline_display || null,
     gradient: ev.gradient || "from-blue-600 via-indigo-600 to-sky-500",
     communityLinks: ev.community_links || { website: "https://dogfood.dev" },
     overview: ev.overview || { description: ev.tagline || "", highlights: [] },
@@ -493,15 +558,14 @@ export async function fetchEvents(category?: string, status?: string): Promise<H
     const res = await fetch(`${getApiBaseUrl()}/api/v1/events?${params.toString()}`, { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         return data.map(formatEventObject);
       }
     }
   } catch (err) {
-    console.warn("fetchEvents fallback:", err);
+    console.warn("fetchEvents error:", err);
   }
-
-  return HACKATHONS_DATA;
+  return [];
 }
 
 export async function fetchEvent(idOrSlug: string): Promise<Hackathon | null> {
@@ -514,9 +578,9 @@ export async function fetchEvent(idOrSlug: string): Promise<Hackathon | null> {
       }
     }
   } catch (err) {
-    console.warn("fetchEvent fallback:", err);
+    console.warn("fetchEvent error:", err);
   }
-  return HACKATHONS_DATA.find((h) => h.slug === idOrSlug || h.id === idOrSlug) || null;
+  return null;
 }
 
 export async function updateEvent(
@@ -594,11 +658,14 @@ export async function submitJudgeScore(payload: {
   }
 }
 
-export async function fetchCalibratedRankings(): Promise<CalibrationResponse | null> {
+export async function fetchCalibratedRankings(hackathon?: string): Promise<CalibrationResponse | null> {
   try {
-    const res = await fetch(`${getApiBaseUrl()}/api/judge/calibrated`, {
+    const headers = getAuthHeaders();
+    const query = hackathon && hackathon !== "all" ? `?hackathon=${encodeURIComponent(hackathon)}` : "";
+    const res = await fetch(`${getApiBaseUrl()}/api/v1/results/calibrated${query}`, {
       cache: "no-store",
-      headers: { Cookie: "session=org_7f2a" },
+      headers,
+      credentials: "include",
     });
     if (res.ok) {
       return await res.json();
@@ -641,6 +708,8 @@ export interface JudgeData {
   name: string;
   email: string;
   tracks: string[];
+  initial_password?: string;
+  assigned_count?: number;
 }
 
 export async function fetchJudges(): Promise<JudgeData[]> {
@@ -661,10 +730,11 @@ export async function fetchJudges(): Promise<JudgeData[]> {
 }
 
 export async function createJudge(payload: {
-  id: string;
+  id?: string;
   name: string;
   email: string;
   tracks?: string[];
+  password?: string;
 }): Promise<{ success: boolean; judge?: JudgeData; error?: string }> {
   try {
     const headers = getAuthHeaders();
@@ -724,6 +794,28 @@ export async function deleteJudge(judgeId: string): Promise<{ success: boolean; 
   }
 }
 
+export async function autoAssignJudges(
+  eventId: string = "evt_01",
+  judgesPerTrack: number = 2
+): Promise<{ success: boolean; message?: string; assignments?: Record<string, string[]>; error?: string }> {
+  try {
+    const headers = getAuthHeaders();
+    const res = await fetch(`/api/v1/judges/auto-assign?event_id=${encodeURIComponent(eventId)}&judges_per_track=${judgesPerTrack}`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.detail || "Failed to auto-assign judges." };
+    }
+    return { success: true, message: data.message, assignments: data.assignments };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Network error while auto-assigning judges." };
+  }
+}
+
+
 export interface RegistrationItem {
   id: string;
   event_id: string;
@@ -773,3 +865,41 @@ export async function removeParticipantRegistration(
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Certificates API
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface Certificate {
+  certificate_id: string;
+  project_id: string;
+  project_title: string;
+  project_summary: string;
+  project_track: string;
+  hackathon_id: string;
+  hackathon_name: string;
+  hackathon_slug: string;
+  recipient_type: "participant" | "judge" | "organizer";
+  recipient_team: string;
+  issued_by: string;
+  issued_at: string;
+  hmac_sha256_signature: string;
+  verification_status: string;
+  event_status: string;
+}
+
+export async function fetchMyCertificates(): Promise<Certificate[]> {
+  try {
+    const headers = getAuthHeaders();
+    const res = await fetch("/api/v1/certificates/my", {
+      headers,
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("fetchMyCertificates error:", err);
+  }
+  return [];
+}

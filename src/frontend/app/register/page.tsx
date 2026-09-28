@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { registerUser, socialLogin } from "../../lib/auth";
 import { CheckCircle2, AlertCircle, User, Shield } from "lucide-react";
+import SocialAuthModal from "@/components/forms/SocialAuthModal";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,7 +29,9 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
+      const err = "Passwords do not match.";
+      setError(err);
+      toast.error(err);
       return;
     }
     setError(null);
@@ -42,12 +46,16 @@ export default function RegisterPage() {
         github_handle: formData.githubHandle || undefined,
       });
 
-      setSuccess(`Account registered successfully as ${user.name} (${user.role})!`);
+      const msg = `Account registered successfully as ${user.name} (${user.role})!`;
+      setSuccess(msg);
+      toast.success(msg);
       setTimeout(() => {
         router.push("/dashboard");
       }, 600);
     } catch (err: any) {
-      setError(err.message || "Registration failed. Please check your details.");
+      const errText = err.message || "Registration failed. Please check your details.";
+      setError(errText);
+      toast.error(errText);
     } finally {
       setLoading(false);
     }
@@ -59,13 +67,17 @@ export default function RegisterPage() {
     setError(null);
     try {
       const user = await socialLogin(socialModal, socialRole);
-      setSuccess(`Connected with ${socialModal.toUpperCase()} as ${user.name}`);
+      const msg = `Connected with ${socialModal.toUpperCase()} as ${user.name}`;
+      setSuccess(msg);
+      toast.success(msg);
       setSocialModal(null);
       setTimeout(() => {
         router.push("/dashboard");
       }, 400);
     } catch (err: any) {
-      setError(err.message);
+      const errText = err.message || "Social registration failed.";
+      setError(errText);
+      toast.error(errText);
     } finally {
       setLoading(false);
     }
@@ -281,64 +293,16 @@ export default function RegisterPage() {
       </div>
 
       {/* Social OAuth Modal */}
-      {socialModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="card-modern max-w-sm w-full p-6 bg-white shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-slate-900 capitalize">
-              Register via {socialModal}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Select your role to complete profile registration with {socialModal.toUpperCase()}:
-            </p>
-
-            <div className="space-y-2">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase">Role</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSocialRole("participant")}
-                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
-                    socialRole === "participant"
-                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
-                      : "border-slate-200 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  Participant
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSocialRole("judge")}
-                  className={`p-2.5 rounded-xl border text-xs font-medium text-left ${
-                    socialRole === "judge"
-                      ? "border-blue-600 bg-blue-50 text-blue-900 font-bold"
-                      : "border-slate-200 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  Judge
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setSocialModal(null)}
-                className="flex-1 btn-secondary text-xs py-2"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleConfirmSocial}
-                className="flex-1 btn-primary text-xs py-2"
-              >
-                {loading ? "Registering..." : "Authorize"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SocialAuthModal
+        isOpen={Boolean(socialModal)}
+        provider={socialModal}
+        role={socialRole}
+        onRoleChange={setSocialRole}
+        onClose={() => setSocialModal(null)}
+        onConfirm={handleConfirmSocial}
+        loading={loading}
+        mode="register"
+      />
     </div>
   );
 }

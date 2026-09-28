@@ -7,8 +7,12 @@ from app.schemas.score import CalibrationResultOut
 router = APIRouter(prefix="/results", tags=["results"])
 
 @router.get("/calibrated", response_model=CalibrationResultOut)
-def get_calibrated_results(shrinkage_k: float = 2.0, current_user = Depends(get_current_user)):
-    return NormalizationService.calculate_empirical_bayes(shrinkage_k=shrinkage_k)
+def get_calibrated_results(
+    shrinkage_k: float = 2.0,
+    hackathon: str = None,
+    current_user = Depends(get_current_user)
+):
+    return NormalizationService.calculate_empirical_bayes(shrinkage_k=shrinkage_k, hackathon_id=hackathon)
 
 @router.get("/export.csv")
 def export_results_csv(current_user = Depends(get_current_user)):

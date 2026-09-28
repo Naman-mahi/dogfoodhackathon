@@ -36,11 +36,11 @@ export interface SidebarNavItem {
 }
 
 export interface DashboardSidebarProps {
-  role: "organizer" | "judge";
+  role: "organizer" | "judge" | string;
   user?: AuthUser | null;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  navItems: SidebarNavItem[];
+  navItems?: SidebarNavItem[];
   extraLinks?: SidebarNavItem[]; // Deprecated, ignored
 }
 
@@ -52,14 +52,18 @@ export default function DashboardSidebar({
   user,
   activeTab,
   onTabChange,
-  navItems,
+  navItems: propsNavItems,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const isOrganizer = role === "organizer";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const navItems = propsNavItems && propsNavItems.length > 0 
+    ? propsNavItems 
+    : (isOrganizer ? ORGANIZER_NAV : JUDGE_NAV);
+
   const activeItem = navItems.find((item) =>
-    item.href ? pathname === item.href : activeTab === item.id
+    activeTab ? activeTab === item.id : (item.href ? pathname === item.href : false)
   ) || navItems[0];
 
   return (
@@ -143,9 +147,11 @@ export default function DashboardSidebar({
           </p>
           <nav className="space-y-1 text-xs font-semibold">
             {navItems.map((item) => {
-              const isActive = item.href
+              const isActive = activeTab
+                ? activeTab === item.id
+                : item.href
                 ? pathname === item.href
-                : activeTab === item.id;
+                : false;
 
               const activeCls = isOrganizer
                 ? "bg-purple-600 text-white shadow-md font-bold"
@@ -163,7 +169,10 @@ export default function DashboardSidebar({
                   <Link
                     key={item.id}
                     href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      onTabChange?.(item.id);
+                      setMobileMenuOpen(false);
+                    }}
                     className={buttonCls}
                   >
                     <span className="shrink-0 transition-transform group-hover:scale-105">

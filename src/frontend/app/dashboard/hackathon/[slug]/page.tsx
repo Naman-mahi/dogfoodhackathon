@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -49,6 +49,21 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function HackathonDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full min-h-[60vh] flex flex-col items-center justify-center p-8 space-y-3">
+          <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+          <span className="text-xs text-slate-400 font-mono">Loading Hackathon Workspace...</span>
+        </div>
+      }
+    >
+      <HackathonDetailContent />
+    </Suspense>
+  );
+}
+
+function HackathonDetailContent() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -231,9 +246,9 @@ export default function HackathonDetailPage() {
     }
   };
 
-  const handleSubmitProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isClosed) {
+  const handleSubmitProject = async (e?: React.FormEvent, statusOverride: "draft" | "submitted" = "submitted") => {
+    if (e) e.preventDefault();
+    if (isClosed && statusOverride === "submitted") {
       const errText = "Submission deadline has passed. No new submissions are accepted.";
       setSubmitMsg({ type: "error", text: errText });
       toast.error(errText);
@@ -252,9 +267,12 @@ export default function HackathonDetailPage() {
         team: user?.name || "Participant Team",
         hackathon_id: event.id,
         hackathon_slug: event.slug,
+        status: statusOverride,
       });
       if (res.success) {
-        const succText = "Project submitted successfully! Confirmation email sent.";
+        const succText = statusOverride === "draft"
+          ? "Project draft saved! You can continue editing before the deadline."
+          : "Project submitted officially! Good luck!";
         setSubmitMsg({
           type: "success",
           text: succText,
@@ -336,6 +354,15 @@ export default function HackathonDetailPage() {
                 Deadline: {new Date(event.submissions_close).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </div>
             )}
+            <div className="pt-2">
+              <Link
+                href={`/results?hackathon=${event.slug || slug}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold border border-white/20 transition-all shadow-sm"
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>View Standings &amp; Leaderboard &rarr;</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -619,9 +646,15 @@ export default function HackathonDetailPage() {
             <div className="card-modern p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Submitted for Judging ✓
-                  </span>
+                  {existingSubmission.status === "draft" ? (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Draft (Unsubmitted)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Submitted for Judging ✓
+                    </span>
+                  )}
                   <span className="text-xs font-mono text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded">
                     Track: {existingSubmission.trackLabel || existingSubmission.track}
                   </span>
@@ -766,25 +799,34 @@ export default function HackathonDetailPage() {
                   />
                 </div>
 
-                <div className="flex justify-end pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={() => handleSubmitProject(undefined, "draft")}
+                    disabled={submitting}
+                    className="btn-secondary text-xs py-2.5 px-5 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span>Save as Draft</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitProject(undefined, "submitted")}
                     disabled={submitting || isClosed}
-                    className="btn-primary text-xs py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary text-xs py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {submitting ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Submitting...
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
                       </>
                     ) : isClosed ? (
                       "Submissions Closed"
                     ) : isEditingSubmission ? (
                       <>
-                        <Send className="w-3.5 h-3.5" /> Update Project Build
+                        <Send className="w-3.5 h-3.5" /> Submit Final Build
                       </>
                     ) : (
                       <>
-                        <Send className="w-3.5 h-3.5" /> Submit Project
+                        <Send className="w-3.5 h-3.5" /> Submit Final Project
                       </>
                     )}
                   </button>

@@ -8,8 +8,11 @@ import {
   LogOut,
   ChevronUp,
   ChevronDown,
+  BadgeCheck,
+  KeyRound,
 } from "lucide-react";
 import { AuthUser, logoutUser } from "../lib/auth";
+import toast from "react-hot-toast";
 
 export interface UserAccountCardProps {
   user?: AuthUser | null;
@@ -35,6 +38,12 @@ export default function UserAccountCard({
 
   // Role accents
   const roleColors = {
+    admin: {
+      avatarBg: "bg-[#3b0764]",
+      avatarBorder: "border-[#7e22ce]",
+      avatarText: "text-[#e9d5ff]",
+      roleLabel: "text-[#c084fc]",
+    },
     organizer: {
       avatarBg: "bg-[#281446]",
       avatarBorder: "border-[#5a2891]",
@@ -85,8 +94,11 @@ export default function UserAccountCard({
   const handleLogout = () => {
     onCloseDropdown?.();
     setMenuOpen(false);
+    toast.success("Signed out successfully.");
     logoutUser();
-    window.location.href = "/login";
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 300);
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -119,6 +131,27 @@ export default function UserAccountCard({
               <span>Profile</span>
             </Link>
 
+            {(role === "admin" || role === "organizer") && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-300 hover:text-white hover:bg-purple-950/40 rounded-xl transition-colors cursor-pointer group"
+              >
+                <Settings className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                <span>Admin Console</span>
+              </Link>
+            )}
+
+            {/* Certificates */}
+            <Link
+              href="/certificates"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+            >
+              <BadgeCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>My Certificates</span>
+            </Link>
+
             {/* Settings -> opens dedicated /settings page */}
             <Link
               href="/settings"
@@ -127,6 +160,16 @@ export default function UserAccountCard({
             >
               <Settings className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span>Settings</span>
+            </Link>
+
+            {/* Change Password */}
+            <Link
+              href="/change-password"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+            >
+              <KeyRound className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span>Change Password</span>
             </Link>
 
             <div className="border-t border-slate-800/80 my-1" />
@@ -221,6 +264,27 @@ export default function UserAccountCard({
         <span>Profile</span>
       </Link>
 
+      {(role === "admin" || role === "organizer") && (
+        <Link
+          href="/admin"
+          onClick={onCloseDropdown}
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-purple-200 bg-[#231238] hover:bg-[#341852] border border-purple-800/80 rounded-xl transition-all cursor-pointer group"
+        >
+          <Settings className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+          <span>Admin Console</span>
+        </Link>
+      )}
+
+      {/* Option 1b: Certificates */}
+      <Link
+        href="/certificates"
+        onClick={onCloseDropdown}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-slate-200 bg-[#131b2e] hover:bg-[#1b2640] border border-slate-800/80 rounded-xl transition-all cursor-pointer group"
+      >
+        <BadgeCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+        <span>My Certificates</span>
+      </Link>
+
       {/* Option 2: Settings (New Page) */}
       <Link
         href="/settings"
@@ -229,6 +293,16 @@ export default function UserAccountCard({
       >
         <Settings className="w-4 h-4 text-[#10b981] group-hover:scale-110 transition-transform" />
         <span>Settings</span>
+      </Link>
+
+      {/* Option 2b: Change Password */}
+      <Link
+        href="/change-password"
+        onClick={onCloseDropdown}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-slate-200 bg-[#131b2e] hover:bg-[#1b2640] border border-slate-800/80 rounded-xl transition-all cursor-pointer group"
+      >
+        <KeyRound className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+        <span>Change Password</span>
       </Link>
 
       {/* Option 3: Sign Out */}

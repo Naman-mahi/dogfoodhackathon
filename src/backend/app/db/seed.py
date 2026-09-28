@@ -40,8 +40,28 @@ def seed_database():
         with open(fixtures_path, "r", encoding="utf-8") as f:
             fixtures = json.load(f)
 
+    # Idempotent seed guard: skip if data already exists
+    # This prevents wiping real user registrations/scores on container restart
+    with engine.connect() as check_conn:
+        from sqlalchemy import func as sqlfunc
+        existing_count = check_conn.execute(
+            select(sqlfunc.count(users_table.c.id))
+        ).scalar()
+        if existing_count and existing_count > 0:
+            admin_user = check_conn.execute(
+                select(users_table).where(users_table.c.email == "admin@dogfood.internal")
+            ).fetchone()
+            if not admin_user:
+                adm = next((u for u in MOCK_USERS if u["email"] == "admin@dogfood.internal"), None)
+                if adm:
+                    with engine.begin() as conn:
+                        conn.execute(insert(users_table).values(adm))
+                    print("[seed] Seeded admin user adm_01 into existing database.")
+            print(f"[seed] Database already seeded ({existing_count} users found). Skipping full re-seed.")
+            return
+
     with engine.begin() as conn:
-        # Wipe clean for reproducible seeding
+        # First-time wipe for reproducible seeding (only runs when DB is empty)
         conn.execute(delete(scores_table))
         conn.execute(delete(projects_table))
         conn.execute(delete(teams_table))

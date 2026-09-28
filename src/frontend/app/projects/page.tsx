@@ -6,20 +6,25 @@ import {
   ArrowLeft,
   ArrowRight,
   Globe,
+  Shuffle,
+  Code,
+  Sparkles,
 } from "lucide-react";
 import { fetchProjects, fetchProject } from "@/lib/api";
 import ProjectSubmissionModal from "./ProjectSubmissionModal";
 import LikeButton from "./LikeButton";
+import ProjectComments from "./ProjectComments";
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ slug?: string; id?: string; track?: string; q?: string }>;
+  searchParams?: Promise<{ slug?: string; id?: string; track?: string; q?: string; sort?: string }>;
 }) {
   const resolvedParams = searchParams ? await searchParams : {};
   const selectedProjectId = resolvedParams.slug || resolvedParams.id;
   const searchQuery = (resolvedParams.q || "").toLowerCase().trim();
   const selectedTrack = resolvedParams.track || "all";
+  const currentSort = resolvedParams.sort || "latest";
 
   // Fetch live active project or project list from REST API
   const activeProject = selectedProjectId
@@ -29,6 +34,7 @@ export default async function ProjectsPage({
   const filteredProjects = await fetchProjects({
     track: selectedTrack,
     q: searchQuery,
+    sort: currentSort,
   });
 
   // Project Details Showcase View (if ?slug=... or ?id=... is selected)
@@ -58,31 +64,34 @@ export default async function ProjectsPage({
                 </Link>
               </div>
               <span className="text-xs text-slate-400 font-mono">
-                slug: {activeProject.slug}
+                Team: {activeProject.team}
               </span>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                {activeProject.title}
-              </h1>
-              <LikeButton
-                idOrSlug={activeProject.slug || activeProject.id}
-                initialLikes={activeProject.likesCount}
-              />
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                  {activeProject.title}
+                </h1>
+                <p className="text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                  {activeProject.summary}
+                </p>
+              </div>
+
+              {/* Interactive Like Counter Button */}
+              <div className="shrink-0 flex items-center gap-3">
+                <LikeButton
+                  projectId={activeProject.id}
+                  initialLikes={activeProject.likesCount || 0}
+                />
+              </div>
             </div>
 
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              {activeProject.summary}
-            </p>
-
-            <div className="pt-2 flex flex-wrap gap-6 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-2 font-mono">
+              <div>Project ID: {activeProject.id}</div>
+              <div>&bull;</div>
               <div>
-                <span className="font-semibold text-slate-700">Team: </span>
-                {activeProject.team}
-              </div>
-              <div>
-                <span className="font-semibold text-slate-700">Submitted: </span>
+                Submitted:{" "}
                 {new Date(activeProject.submittedAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -154,6 +163,9 @@ export default async function ProjectsPage({
             )}
           </div>
         </div>
+
+        {/* Community Feedback & Discussion Thread (T3) */}
+        <ProjectComments projectId={activeProject.id} />
       </div>
     );
   }
@@ -170,7 +182,17 @@ export default async function ProjectsPage({
             Explore peer-evaluated submissions, architectures, and open-source prototypes.
           </p>
         </div>
-        <ProjectSubmissionModal />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/embed/projects"
+            target="_blank"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
+          >
+            <Code className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Embed Widget &rarr;</span>
+          </Link>
+          <ProjectSubmissionModal />
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -201,6 +223,22 @@ export default async function ProjectsPage({
               <option value="trk_04">Climate &amp; Energy</option>
             </select>
           </div>
+
+          {/* Anti-Bias Shuffle Sort Toggle */}
+          <Link
+            href={`/projects?${new URLSearchParams({
+              ...resolvedParams,
+              sort: currentSort === "random" ? "latest" : "random",
+            }).toString()}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+              currentSort === "random"
+                ? "bg-purple-100 text-purple-800 border-purple-300 ring-2 ring-purple-300/40"
+                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+            }`}
+          >
+            <Shuffle className="w-3.5 h-3.5 text-purple-600" />
+            <span>{currentSort === "random" ? "Randomized (Anti-Bias)" : "Anti-Bias Shuffle"}</span>
+          </Link>
 
           <button
             type="submit"
@@ -238,39 +276,45 @@ export default async function ProjectsPage({
                     {p.trackLabel}
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    {new Date(p.submittedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    Team {p.team}
                   </span>
                 </div>
 
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {p.title}
-                </h3>
+                <div className="space-y-1">
+                  <h2 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    {p.title}
+                  </h2>
+                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                    {p.summary}
+                  </p>
+                </div>
 
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                  {p.summary}
-                </p>
-
-                <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                  <div>
-                    Team: <span className="text-slate-800 font-semibold">{p.team}</span>
-                  </div>
-                  <LikeButton
-                    idOrSlug={p.slug || p.id}
-                    initialLikes={p.likesCount}
-                  />
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {p.technologies.slice(0, 3).map((t) => (
+                    <span
+                      key={t}
+                      className="px-2 py-0.5 bg-slate-50 border border-slate-200/80 text-[10px] font-mono rounded text-slate-600"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                  {p.technologies.length > 3 && (
+                    <span className="text-[10px] text-slate-400 font-mono py-0.5">
+                      +{p.technologies.length - 3}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <LikeButton projectId={p.id} initialLikes={p.likesCount || 0} />
+
                 <Link
-                  href={`/projects?slug=${p.slug || p.id}`}
-                  className="w-full inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl transition-all shadow-xs"
+                  href={`/projects?id=${p.id}`}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 group/btn"
                 >
-                  View Architecture
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Inspect</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                 </Link>
               </div>
             </div>
