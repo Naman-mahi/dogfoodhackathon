@@ -16,12 +16,20 @@ export const TEST_PERSONAS: Record<string, {
   name: string;
   email: string;
   password: string;
-  role: "organizer" | "judge" | "participant";
+  role: "admin" | "organizer" | "judge" | "participant";
   description: string;
   badge: string;
 }> = {
+  admin: {
+    name: "System Administrator",
+    email: "admin@dogfood.internal",
+    password: "demo2026",
+    role: "admin",
+    description: "Global root access, manage users, promote roles, view system telemetry",
+    badge: "Admin",
+  },
   organizer: {
-    name: "DOGFOOD Admin",
+    name: "DOGFOOD Organizer",
     email: "organizer@dogfood.dev",
     password: "demo2026",
     role: "organizer",
@@ -90,6 +98,7 @@ export function saveStoredUser(user: AuthUser) {
   if (token) {
     setSessionCookie(token);
   }
+  window.dispatchEvent(new CustomEvent("dogfood_auth_change", { detail: displayData }));
 }
 
 export function updateStoredUser(updates: Partial<AuthUser>) {
@@ -98,6 +107,7 @@ export function updateStoredUser(updates: Partial<AuthUser>) {
   if (current) {
     const updated = { ...current, ...updates };
     localStorage.setItem("dogfood_user", JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("dogfood_auth_change", { detail: updated }));
   }
 }
 
@@ -220,7 +230,7 @@ export async function socialLogin(
  * Replaced the old approach of directly setting hardcoded session tokens.
  */
 export async function quickPersonaLogin(
-  personaKey: "organizer" | "judge_a" | "judge_b" | "participant"
+  personaKey: "admin" | "organizer" | "judge_a" | "judge_b" | "participant"
 ): Promise<AuthUser> {
   const p = TEST_PERSONAS[personaKey];
   if (!p) throw new Error("Unknown persona");
@@ -266,5 +276,6 @@ export async function logoutUser(): Promise<void> {
   clearSessionCookie();
   if (typeof window !== "undefined") {
     localStorage.removeItem("dogfood_user");
+    window.dispatchEvent(new CustomEvent("dogfood_auth_change", { detail: null }));
   }
 }

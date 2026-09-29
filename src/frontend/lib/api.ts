@@ -61,6 +61,35 @@ export interface CalibrationResponse {
   available_hackathons?: HackathonRef[];
 }
 
+export interface PlatformStats {
+  users: number;
+  participants: number;
+  judges: number;
+  organizers: number;
+  admins: number;
+  events: number;
+  projects: number;
+  scores: number;
+  registrations: number;
+  audit_logs: number;
+  webhooks: number;
+  mode: string;
+  system_status: string;
+}
+
+export async function fetchPlatformStats(): Promise<PlatformStats | null> {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/api/v1/admin/stats`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchProjects(filters?: {
   track?: string;
   hackathon?: string;
@@ -519,9 +548,16 @@ export async function changePassword(
 }
 
 export function formatEventObject(ev: any): Hackathon {
+  const prizeAmt = ev.prize_amount ?? 0;
   return {
     ...ev,
     slug: ev.slug || ev.id,
+    title: ev.title || ev.name || "Untitled Hackathon",
+    tagline: ev.tagline || "Global builder competition and peer-reviewed evaluation.",
+    category: ev.category || "devtools",
+    categoryLabel: ev.category_label || ev.categoryLabel || (ev.category ? ev.category.toUpperCase() : "General"),
+    format: ev.format || "online",
+    status: ev.status || "live",
     startDate: ev.start_date || null,
     endDate: ev.end_date || null,
     registration_deadline: ev.registration_deadline || ev.submissions_close || ev.end_date || null,
@@ -530,12 +566,12 @@ export function formatEventObject(ev: any): Hackathon {
     registrationClosedReason: ev.registration_closed_reason || null,
     timezone: ev.timezone || "UTC",
     isFree: ev.is_free ?? true,
-    entryFeeDisplay: ev.entry_fee_display || "Free Entry",
-    prizeAmount: ev.prize_amount ?? 0,
-    prizeDisplay: ev.prize_display || null,
+    entryFeeDisplay: ev.entry_fee_display || (ev.is_free === false ? "$10 USD" : "Free Entry"),
+    prizeAmount: prizeAmt,
+    prizeDisplay: ev.prize_display || (prizeAmt > 0 ? `$${prizeAmt.toLocaleString()} USD` : "Open Pool"),
     participantCount: ev.participant_count ?? 0,
     submissionCount: ev.submission_count ?? 0,
-    deadlineDisplay: ev.deadline_display || null,
+    deadlineDisplay: ev.deadline_display || (ev.submissions_close ? `Closes ${new Date(ev.submissions_close).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Ongoing"),
     gradient: ev.gradient || "from-blue-600 via-indigo-600 to-sky-500",
     communityLinks: ev.community_links || { website: "https://dogfood.dev" },
     overview: ev.overview || { description: ev.tagline || "", highlights: [] },

@@ -38,6 +38,7 @@ import {
 } from "@/lib/api";
 import toast from "react-hot-toast";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import Select2 from "@/components/Select2";
 
 function EventsContent() {
   const router = useRouter();
@@ -400,7 +401,7 @@ function EventsContent() {
 
         {/* Highlight Stats Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-6 border-t border-slate-100">
-          <div className="card-modern p-4 bg-slate-50/70 border border-slate-200 space-y-1">
+          <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-1">
             <div className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
               {hackathon.prizeDisplay}
             </div>
@@ -408,7 +409,7 @@ function EventsContent() {
               Total Prize Pool
             </div>
           </div>
-          <div className="card-modern p-4 bg-slate-50/70 border border-slate-200 space-y-1">
+          <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-1">
             <div className="text-xl sm:text-2xl font-black text-slate-900">
               {hackathon.entryFeeDisplay}
             </div>
@@ -416,7 +417,7 @@ function EventsContent() {
               Entry Type
             </div>
           </div>
-          <div className="card-modern p-4 bg-slate-50/70 border border-slate-200 space-y-1">
+          <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-1">
             <div className="text-xl sm:text-2xl font-black text-slate-900">
               {hackathon.participantCount.toLocaleString()}
             </div>
@@ -424,7 +425,7 @@ function EventsContent() {
               Registered Builders
             </div>
           </div>
-          <div className="card-modern p-4 bg-slate-50/70 border border-slate-200 space-y-1">
+          <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-1">
             <div className="text-xl sm:text-2xl font-black text-slate-900">
               {hackathon.submissionCount > 0
                 ? `${hackathon.submissionCount} Builds`
@@ -434,7 +435,7 @@ function EventsContent() {
               Submissions
             </div>
           </div>
-          <div className="card-modern p-4 bg-slate-50/70 border border-slate-200 space-y-1">
+          <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-1">
             <div
               className={`text-xl sm:text-2xl font-black ${
                 isRegClosed ? "text-rose-600" : "text-emerald-600"
@@ -722,15 +723,17 @@ function EventsContent() {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Target Track</label>
-                      <select
+                      <Select2
+                        variant="light"
                         value={submissionForm.track}
-                        onChange={(e) => setSubmissionForm({ ...submissionForm, track: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {hackathon.tracks?.map((t) => (
-                          <option key={t.id} value={t.name}>{t.name} ({t.prize})</option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSubmissionForm({ ...submissionForm, track: val })}
+                        options={(hackathon.tracks || []).map((t) => ({
+                          value: t.name,
+                          label: `${t.name} (${t.prize})`,
+                        }))}
+                        isSearchable={true}
+                        placeholder="Select track..."
+                      />
                     </div>
                   </div>
 
@@ -1058,7 +1061,7 @@ function EventsContent() {
 
   if (currentUser && currentUser.role) {
     return (
-      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50/30">
+      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50 text-slate-900">
         <DashboardSidebar
           role={currentUser.role}
           user={currentUser}

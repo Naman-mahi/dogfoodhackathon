@@ -49,7 +49,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = async (personaKey: "organizer" | "judge_a" | "judge_b" | "participant") => {
+  const handleQuickLogin = async (personaKey: "admin" | "organizer" | "judge_a" | "judge_b" | "participant") => {
     setLoading(true);
     setError(null);
     try {
@@ -58,7 +58,11 @@ export default function LoginPage() {
       setSuccess(msg);
       toast.success(`Switched persona: ${user.name} (${user.role})`);
       setTimeout(() => {
-        router.push("/dashboard");
+        if (user.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       }, 400);
     } catch (err: any) {
       const errText = err.message || "Persona authentication failed.";
@@ -116,17 +120,30 @@ export default function LoginPage() {
           <span className="text-[10px] font-mono text-emerald-400">Verified via Backend →</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleQuickLogin("admin")}
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-purple-950/70 hover:bg-purple-900/70 border border-purple-700 text-left transition-all hover:scale-[1.01] cursor-pointer"
+          >
+            <ShieldCheck className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-white">System Admin</div>
+              <div className="text-[10px] text-purple-200">Global Root &amp; Users</div>
+            </div>
+          </button>
+
           <button
             type="button"
             disabled={loading}
             onClick={() => handleQuickLogin("organizer")}
-            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01] cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
             <div>
               <div className="text-xs font-bold text-white">Organizer</div>
-              <div className="text-[10px] text-slate-400">Admin Control & CSV Export</div>
+              <div className="text-[10px] text-slate-400">Admin Control &amp; CSV Export</div>
             </div>
           </button>
 
@@ -134,7 +151,7 @@ export default function LoginPage() {
             type="button"
             disabled={loading}
             onClick={() => handleQuickLogin("judge_a")}
-            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01] cursor-pointer"
           >
             <Award className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
             <div>
@@ -147,7 +164,7 @@ export default function LoginPage() {
             type="button"
             disabled={loading}
             onClick={() => handleQuickLogin("judge_b")}
-            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01] cursor-pointer"
           >
             <UserCheck className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
             <div>
@@ -160,7 +177,7 @@ export default function LoginPage() {
             type="button"
             disabled={loading}
             onClick={() => handleQuickLogin("participant")}
-            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01]"
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:scale-[1.01] cursor-pointer sm:col-span-2 md:col-span-2"
           >
             <Code className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
             <div>

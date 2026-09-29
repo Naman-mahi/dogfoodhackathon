@@ -12,18 +12,22 @@ import {
   ArrowLeft,
   Trophy,
   ShieldCheck,
+  Shield,
   Loader2,
   ExternalLink,
   Copy,
   Check,
   Search,
-  Filter,
-  Shield,
   Sparkles,
   Star,
+  LayoutGrid,
+  Table as TableIcon,
 } from "lucide-react";
 import { getStoredUser, fetchCurrentUser, AuthUser } from "@/lib/auth";
 import { fetchMyCertificates, Certificate } from "@/lib/api";
+import DataTable, { ColumnDef } from "@/components/DataTable";
+import Select2 from "@/components/Select2";
+import toast from "react-hot-toast";
 
 // ─── Certificate Card ──────────────────────────────────────────────────────────
 
@@ -265,7 +269,110 @@ export default function CertificatesPage() {
     loadCerts();
   }, [loading]);
 
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const role = user?.role || "participant";
+
+  const certColumns: ColumnDef<Certificate>[] = [
+    {
+      key: "certificate_id",
+      header: "Certificate ID",
+      sortable: true,
+      render: (c) => (
+        <div className="flex items-center gap-2 font-mono text-xs text-emerald-400">
+          <Cpu className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+          <span className="font-bold">{c.certificate_id}</span>
+        </div>
+      ),
+    },
+    {
+      key: "project_title",
+      header: "Project Submission",
+      sortable: true,
+      render: (c) => (
+        <div>
+          <div className="font-bold text-white text-xs">{c.project_title}</div>
+          {c.project_track && (
+            <span className="text-[10px] text-slate-400 font-mono">{c.project_track}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "hackathon_name",
+      header: "Hackathon Event",
+      sortable: true,
+      render: (c) => (
+        <span className="text-slate-300 font-medium text-xs">{c.hackathon_name}</span>
+      ),
+    },
+    {
+      key: "recipient_type",
+      header: "Role / Badge",
+      sortable: true,
+      render: (c) => {
+        const isJudge = c.recipient_type === "judge";
+        const isOrganizer = c.recipient_type === "organizer";
+        const badgeStyle = isJudge
+          ? "bg-blue-950/70 border-blue-500/40 text-blue-300"
+          : isOrganizer
+          ? "bg-purple-950/70 border-purple-500/40 text-purple-300"
+          : "bg-emerald-950/70 border-emerald-500/40 text-emerald-300";
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold border ${badgeStyle}`}>
+            {c.recipient_type}
+          </span>
+        );
+      },
+    },
+    {
+      key: "issued_at",
+      header: "Issued Date",
+      sortable: true,
+      render: (c) => (
+        <span className="text-slate-400 text-xs font-mono">
+          {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "hmac_sha256_signature",
+      header: "HMAC Signature",
+      sortable: false,
+      render: (c) => (
+        <div className="flex items-center gap-1.5 max-w-xs">
+          <code className="text-[10px] font-mono text-emerald-400 truncate bg-black/40 px-2 py-0.5 rounded border border-white/5">
+            {c.hmac_sha256_signature.slice(0, 16)}…
+          </code>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(c.hmac_sha256_signature);
+              toast.success("HMAC signature copied!");
+            }}
+            className="p-1 hover:text-white text-slate-400 cursor-pointer"
+            title="Copy full HMAC signature"
+          >
+            <Copy className="w-3 h-3" />
+          </button>
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Action",
+      sortable: false,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (c) => (
+        <Link
+          href={`/projects/${c.project_id}`}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-semibold border border-white/10 transition-colors"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span>View Project</span>
+        </Link>
+      ),
+    },
+  ];
 
   const filteredCerts = certs.filter((c) => {
     const matchesSearch =
@@ -327,54 +434,81 @@ export default function CertificatesPage() {
               </p>
             </div>
 
-            {/* Stats pill */}
-            {!certsLoading && (
-              <div className="shrink-0 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-center">
-                <p className="text-4xl font-black text-white">{certs.length}</p>
-                <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mt-1">
-                  {certs.length === 1 ? "Certificate" : "Certificates"}
-                </p>
+            {/* Stats pill & View Switcher */}
+            <div className="flex items-center gap-3">
+              {!certsLoading && (
+                <div className="shrink-0 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-center">
+                  <p className="text-3xl font-black text-white">{certs.length}</p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mt-0.5">
+                    {certs.length === 1 ? "Certificate" : "Certificates"}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 shrink-0">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                    viewMode === "grid"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                  title="Card Grid View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                    viewMode === "table"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                  title="DataTable View"
+                >
+                  <TableIcon className="w-4 h-4" />
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Search & Filter bar */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by project, hackathon, or certificate ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all"
-            />
-          </div>
-          {/* Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500 shrink-0" />
-            {(["all", "participant", "judge", "organizer"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  filter === f
-                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
-                    : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/10"
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
+      {/* Search & Filter bar (for Grid View) */}
+      {viewMode === "grid" && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search by project, hackathon, or certificate ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all"
+              />
+            </div>
+            {/* Filter using Select2 */}
+            <div className="w-48 shrink-0">
+              <Select2
+                variant="dark"
+                value={filter}
+                onChange={setFilter}
+                options={[
+                  { value: "all", label: "All Roles" },
+                  { value: "participant", label: "Participant" },
+                  { value: "judge", label: "Judge" },
+                  { value: "organizer", label: "Organizer" },
+                ]}
+                isSearchable={false}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Certificate Grid */}
+      {/* Certificate Content: Grid or DataTable */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {certsLoading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -383,12 +517,11 @@ export default function CertificatesPage() {
           </div>
         ) : filteredCerts.length === 0 ? (
           certs.length > 0 ? (
-            // Has certs but search returned nothing
             <div className="text-center py-20">
               <p className="text-slate-400 text-sm">No certificates match your search.</p>
               <button
                 onClick={() => { setSearch(""); setFilter("all"); }}
-                className="mt-3 text-xs text-emerald-400 hover:underline"
+                className="mt-3 text-xs text-emerald-400 hover:underline cursor-pointer"
               >
                 Clear filters
               </button>
@@ -396,6 +529,18 @@ export default function CertificatesPage() {
           ) : (
             <EmptyState role={role} />
           )
+        ) : viewMode === "table" ? (
+          <div className="bg-[#0b101d] border border-slate-800 rounded-3xl p-6 shadow-2xl">
+            <DataTable<Certificate>
+              data={filteredCerts}
+              columns={certColumns}
+              searchableKeys={["certificate_id", "project_title", "hackathon_name", "recipient_type", "issued_at"]}
+              searchPlaceholder="Filter certificates by project, hackathon, ID..."
+              emptyMessage="No certificates found."
+              pageSize={10}
+              pageSizeOptions={[5, 10, 25, 50]}
+            />
+          </div>
         ) : (
           <>
             <p className="text-xs text-slate-500 mb-5 font-mono">

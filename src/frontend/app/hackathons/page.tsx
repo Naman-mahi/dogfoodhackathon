@@ -7,6 +7,7 @@ import { Search, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, isEventRegistrationOpen, Hackathon } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
+import Select2 from "@/components/Select2";
 
 export default function HackathonsPage() {
   const router = useRouter();
@@ -151,9 +152,9 @@ export default function HackathonsPage() {
     return hackathonsList.filter((h) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesTitle = h.title.toLowerCase().includes(q);
-        const matchesTagline = h.tagline.toLowerCase().includes(q);
-        const matchesCat = h.categoryLabel.toLowerCase().includes(q);
+        const matchesTitle = (h.title || h.name || "").toLowerCase().includes(q);
+        const matchesTagline = (h.tagline || "").toLowerCase().includes(q);
+        const matchesCat = (h.categoryLabel || h.category || "").toLowerCase().includes(q);
         if (!matchesTitle && !matchesTagline && !matchesCat) return false;
       }
 
@@ -169,18 +170,21 @@ export default function HackathonsPage() {
         return false;
       }
 
-      if (selectedPrizeTier === "under5k" && h.prizeAmount >= 5000) return false;
-      if (selectedPrizeTier === "5k-25k" && (h.prizeAmount < 5000 || h.prizeAmount > 25000)) return false;
-      if (selectedPrizeTier === "25k+" && h.prizeAmount < 25000) return false;
+      const prize = h.prizeAmount || 0;
+      if (selectedPrizeTier === "under5k" && prize >= 5000) return false;
+      if (selectedPrizeTier === "5k-25k" && (prize < 5000 || prize > 25000)) return false;
+      if (selectedPrizeTier === "25k+" && prize < 25000) return false;
 
       return true;
     }).sort((a, b) => {
-      if (sortBy === "highestPrize") return b.prizeAmount - a.prizeAmount;
-      if (sortBy === "mostParticipants") return b.participantCount - a.participantCount;
-      const statusWeight = { live: 0, upcoming: 1, completed: 2 };
-      return statusWeight[a.status] - statusWeight[b.status];
+      if (sortBy === "highestPrize") return (b.prizeAmount || 0) - (a.prizeAmount || 0);
+      if (sortBy === "mostParticipants") return (b.participantCount || 0) - (a.participantCount || 0);
+      const statusWeight: Record<string, number> = { live: 0, upcoming: 1, completed: 2 };
+      const weightA = statusWeight[a.status] ?? 3;
+      const weightB = statusWeight[b.status] ?? 3;
+      return weightA - weightB;
     });
-  }, [searchQuery, selectedStatuses, selectedFormats, selectedCategories, selectedPrizeTier, sortBy]);
+  }, [hackathonsList, searchQuery, selectedStatuses, selectedFormats, selectedCategories, selectedPrizeTier, sortBy]);
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -347,19 +351,23 @@ export default function HackathonsPage() {
             </span>
 
             <div className="flex items-center gap-2 text-xs">
-              <label htmlFor="sortSelect" className="font-medium text-slate-500">
+              <label htmlFor="sortSelect" className="font-medium text-slate-500 shrink-0">
                 Sort by:
               </label>
-              <select
-                id="sortSelect"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="soonest">Soonest Deadline</option>
-                <option value="highestPrize">Highest Prize</option>
-                <option value="mostParticipants">Most Builders</option>
-              </select>
+              <div className="w-44">
+                <Select2
+                  variant="light"
+                  id="sortSelect"
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: "soonest", label: "Soonest Deadline" },
+                    { value: "highestPrize", label: "Highest Prize" },
+                    { value: "mostParticipants", label: "Most Builders" },
+                  ]}
+                  isSearchable={false}
+                />
+              </div>
             </div>
           </div>
 
@@ -399,7 +407,7 @@ export default function HackathonsPage() {
                   >
                     <div>
                       {/* Banner Area */}
-                      <div className={`h-36 bg-gradient-to-tr ${h.gradient} relative p-4 flex flex-col justify-between text-white`}>
+                      <div className={`h-36 bg-gradient-to-tr ${h.gradient || "from-blue-600 via-indigo-600 to-sky-500"} relative p-4 flex flex-col justify-between text-white`}>
                         <div className="flex items-center justify-between">
                           <span
                             className={`badge-pill ${
@@ -422,13 +430,13 @@ export default function HackathonsPage() {
                             )}
                           </span>
                           <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-xs text-[10px] font-medium text-white/90">
-                            {h.format.toUpperCase()}
+                            {(h.format || "online").toUpperCase()}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs font-mono">
                           <span className="bg-black/30 backdrop-blur-xs px-2.5 py-1 rounded-lg">
-                            {h.deadlineDisplay}
+                            {h.deadlineDisplay || "Ongoing"}
                           </span>
                           {!regState.isOpen && (
                             <span className="bg-rose-950/70 text-rose-200 border border-rose-500/30 px-2 py-0.5 rounded text-[10px]">
@@ -441,23 +449,23 @@ export default function HackathonsPage() {
                       {/* Card Content */}
                       <div className="p-6 space-y-3">
                         <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">
-                          {h.categoryLabel}
+                          {h.categoryLabel || (h.category ? h.category.toUpperCase() : "General")}
                         </span>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                          {h.title}
+                          {h.title || "Untitled Hackathon"}
                         </h3>
                         <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                          {h.tagline}
+                          {h.tagline || ""}
                         </p>
 
                         <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 border-t border-slate-100">
                           <div>
                             <span className="text-slate-400 block">Prize Pool</span>
-                            <span className="font-bold text-slate-800">{h.prizeDisplay}</span>
+                            <span className="font-bold text-slate-800">{h.prizeDisplay || (h.prizeAmount ? `$${h.prizeAmount.toLocaleString()} USD` : "Open Pool")}</span>
                           </div>
                           <div>
                             <span className="text-slate-400 block">Entry</span>
-                            <span className="font-semibold text-emerald-600">{h.entryFeeDisplay}</span>
+                            <span className="font-semibold text-emerald-600">{h.entryFeeDisplay || (h.isFree ? "Free Entry" : "$0")}</span>
                           </div>
                           <div>
                             <span className="text-slate-400 block">Registration</span>

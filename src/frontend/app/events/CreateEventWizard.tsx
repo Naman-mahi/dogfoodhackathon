@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
+import Select2 from "@/components/Select2";
 
 export default function CreateEventWizard() {
   const router = useRouter();
@@ -397,23 +398,32 @@ export default function CreateEventWizard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                <select
+                <Select2
+                  variant="light"
                   value={eventData.category}
-                  onChange={(e) =>
+                  onChange={(val) => {
+                    const labelMap: Record<string, string> = {
+                      devtools: "Developer Tools",
+                      ai: "Artificial Intelligence",
+                      web3: "Web3 & Decentralized",
+                      opensource: "Open Source Infrastructure",
+                      climate: "Climate & Clean Tech",
+                    };
                     setEventData({
                       ...eventData,
-                      category: e.target.value,
-                      category_label: e.target.options[e.target.selectedIndex].text,
-                    })
-                  }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="devtools">Developer Tools</option>
-                  <option value="ai">Artificial Intelligence</option>
-                  <option value="web3">Web3 & Decentralized</option>
-                  <option value="opensource">Open Source Infrastructure</option>
-                  <option value="climate">Climate & Clean Tech</option>
-                </select>
+                      category: val,
+                      category_label: labelMap[val] || val,
+                    });
+                  }}
+                  options={[
+                    { value: "devtools", label: "Developer Tools" },
+                    { value: "ai", label: "Artificial Intelligence" },
+                    { value: "web3", label: "Web3 & Decentralized" },
+                    { value: "opensource", label: "Open Source Infrastructure" },
+                    { value: "climate", label: "Climate & Clean Tech" },
+                  ]}
+                  isSearchable={true}
+                />
               </div>
             </div>
 
@@ -441,15 +451,17 @@ export default function CreateEventWizard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Event Format</label>
-                <select
+                <Select2
+                  variant="light"
                   value={eventData.format}
-                  onChange={(e) => setEventData({ ...eventData, format: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="online">Online / Virtual</option>
-                  <option value="in-person">In-Person Venue</option>
-                  <option value="hybrid">Hybrid (Global + Regional Hubs)</option>
-                </select>
+                  onChange={(val) => setEventData({ ...eventData, format: val })}
+                  options={[
+                    { value: "online", label: "Online / Virtual" },
+                    { value: "in-person", label: "In-Person Venue" },
+                    { value: "hybrid", label: "Hybrid (Global + Regional Hubs)" },
+                  ]}
+                  isSearchable={false}
+                />
               </div>
             </div>
           </div>
@@ -530,16 +542,18 @@ export default function CreateEventWizard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Team Size Limit</label>
-                <select
+                <Select2
+                  variant="light"
                   value={eventData.team_size_limit}
-                  onChange={(e) => setEventData({ ...eventData, team_size_limit: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="1-2 Members">1 - 2 Members (Pair Programming)</option>
-                  <option value="1-4 Members">1 - 4 Members (Standard Squad)</option>
-                  <option value="1-5 Members">1 - 5 Members (Expanded Team)</option>
-                  <option value="Solo Only">Solo Builders Only</option>
-                </select>
+                  onChange={(val) => setEventData({ ...eventData, team_size_limit: val })}
+                  options={[
+                    { value: "1-2 Members", label: "1 - 2 Members (Pair Programming)" },
+                    { value: "1-4 Members", label: "1 - 4 Members (Standard Squad)" },
+                    { value: "1-5 Members", label: "1 - 5 Members (Expanded Team)" },
+                    { value: "Solo Only", label: "Solo Builders Only" },
+                  ]}
+                  isSearchable={false}
+                />
               </div>
             </div>
           </div>
@@ -586,7 +600,7 @@ export default function CreateEventWizard() {
             {eventData.tracks.map((trk, idx) => (
               <div
                 key={trk.id || idx}
-                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
+                className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">
@@ -684,7 +698,7 @@ export default function CreateEventWizard() {
             {eventData.rubrics.map((rubric, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
+                className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">

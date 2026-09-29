@@ -68,7 +68,7 @@ class AuthService:
         github_handle: Optional[str] = None,
         bio: Optional[str] = None,
     ) -> Dict[str, Any]:
-        prefix = "org" if role == "organizer" else "jdg" if role == "judge" else "prt"
+        prefix = "adm" if role == "admin" else "org" if role == "organizer" else "jdg" if role == "judge" else "prt"
         user_id = f"{prefix}_{uuid.uuid4().hex[:6]}"
         if not avatar_url:
             avatar_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={user_id}"

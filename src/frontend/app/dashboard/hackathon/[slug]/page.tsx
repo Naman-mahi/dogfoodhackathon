@@ -37,6 +37,7 @@ import {
   Project,
 } from "@/lib/api";
 import toast from "react-hot-toast";
+import Select2 from "@/components/Select2";
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 type TabId = "overview" | "tracks" | "teams" | "submissions";
@@ -737,20 +738,19 @@ function HackathonDetailContent() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Track *</label>
-                    <select
-                      required
+                    <Select2
+                      variant="light"
+                      placeholder="Select track..."
+                      searchPlaceholder="Search tracks..."
                       value={submitForm.track}
-                      onChange={(e) => setSubmitForm((f) => ({ ...f, track: e.target.value }))}
+                      onChange={(val) => setSubmitForm((f) => ({ ...f, track: val }))}
                       disabled={isClosed}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-                    >
-                      <option value="">Select track...</option>
-                      {event.tracks?.map((t) => (
-                        <option key={t.id} value={t.name}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={(event.tracks || []).map((t) => ({
+                        value: t.name,
+                        label: t.name,
+                        description: t.description || undefined,
+                      }))}
+                    />
                   </div>
                 </div>
 

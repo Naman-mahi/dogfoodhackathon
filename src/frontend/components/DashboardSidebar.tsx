@@ -67,15 +67,15 @@ export default function DashboardSidebar({
   ) || navItems[0];
 
   return (
-    <aside className="w-full lg:w-64 bg-[#080c16] text-white flex flex-col justify-between shrink-0 border-r border-slate-800/80 sticky top-16 z-40 lg:h-[calc(100vh-4rem)] lg:self-start">
+    <aside className="w-full lg:w-64 bg-white text-slate-800 flex flex-col justify-between shrink-0 border-r border-slate-200 sticky top-16 z-40 lg:h-[calc(100vh-4rem)] lg:self-start">
       {/* Mobile Top Bar (< lg screens): Displays current active tab and toggle button */}
-      <div className="lg:hidden flex items-center justify-between p-3.5 border-b border-slate-800/80 bg-slate-950/80">
+      <div className="lg:hidden flex items-center justify-between p-3.5 border-b border-slate-200 bg-white">
         <div className="flex items-center gap-2.5">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
               isOrganizer
-                ? "bg-purple-950/60 border-purple-500/40 text-purple-400"
-                : "bg-blue-950/60 border-blue-500/40 text-blue-400"
+                ? "bg-purple-50 border-purple-200 text-purple-700"
+                : "bg-blue-50 border-blue-200 text-blue-700"
             }`}
           >
             {isOrganizer ? <ShieldCheck className="w-4 h-4" /> : <Award className="w-4 h-4" />}
@@ -84,7 +84,7 @@ export default function DashboardSidebar({
             <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
               {isOrganizer ? "Organizer Hub" : "Judge Console"}
             </div>
-            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <span>{activeItem?.label}</span>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function DashboardSidebar({
         <button
           type="button"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1.5 font-semibold transition-colors"
+          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs flex items-center gap-1.5 font-semibold transition-colors"
           aria-expanded={mobileMenuOpen}
           aria-label="Toggle navigation drawer"
         >
@@ -106,16 +106,16 @@ export default function DashboardSidebar({
       <div
         className={`${
           mobileMenuOpen ? "block" : "hidden"
-        } lg:block flex-1 overflow-y-auto min-h-0 border-b border-slate-800/80 lg:border-b-0`}
+        } lg:block flex-1 overflow-y-auto min-h-0 border-b border-slate-200 lg:border-b-0`}
       >
         {/* Desktop Branding & Console Badge Header */}
-        <div className="hidden lg:block p-5 border-b border-slate-800/80 bg-slate-950/40">
+        <div className="hidden lg:block p-5 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
                 isOrganizer
-                  ? "bg-purple-950/60 border-purple-500/40 text-purple-400"
-                  : "bg-blue-950/60 border-blue-500/40 text-blue-400"
+                  ? "bg-purple-50 border-purple-200 text-purple-700"
+                  : "bg-blue-50 border-blue-200 text-blue-700"
               }`}
             >
               {isOrganizer ? (
@@ -125,16 +125,13 @@ export default function DashboardSidebar({
               )}
             </div>
             <div className="min-w-0">
-              <div className="font-black text-sm tracking-wide text-white truncate flex items-center gap-1.5">
+              <div className="font-black text-sm tracking-wide text-slate-900 truncate flex items-center gap-1.5">
                 {isOrganizer ? "Organizer Hub" : "Judge Console"}
                 <span
                   className={`inline-block w-1.5 h-1.5 rounded-full ${
-                    isOrganizer ? "bg-purple-400" : "bg-blue-400"
+                    isOrganizer ? "bg-purple-600" : "bg-blue-600"
                   } animate-pulse`}
                 />
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono tracking-tight uppercase">
-                {isOrganizer ? "Tier 1 & 2 Calibrated" : "Blind Peer Isolated"}
               </div>
             </div>
           </div>
@@ -142,7 +139,7 @@ export default function DashboardSidebar({
 
         {/* Navigation Links */}
         <div className="px-3 pt-4 pb-4">
-          <p className="px-3 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">
+          <p className="px-3 text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold mb-2">
             Navigation
           </p>
           <nav className="space-y-1 text-xs font-semibold">
@@ -154,11 +151,11 @@ export default function DashboardSidebar({
                 : false;
 
               const activeCls = isOrganizer
-                ? "bg-purple-600 text-white shadow-md font-bold"
-                : "bg-blue-600 text-white shadow-md font-bold";
+                ? "bg-purple-50 text-purple-700 font-bold border border-purple-200/80 shadow-2xs"
+                : "bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-2xs";
 
               const inactiveCls =
-                "text-slate-400 hover:text-white hover:bg-slate-800/70";
+                "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium";
 
               const buttonCls = `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer group ${
                 isActive ? activeCls : inactiveCls
@@ -180,7 +177,7 @@ export default function DashboardSidebar({
                     </span>
                     <span className="flex-1 truncate">{item.label}</span>
                     {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOrganizer ? "bg-purple-600" : "bg-blue-600"} shrink-0`} />
                     )}
                   </Link>
                 );
@@ -201,7 +198,7 @@ export default function DashboardSidebar({
                   </span>
                   <span className="flex-1 truncate">{item.label}</span>
                   {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOrganizer ? "bg-purple-600" : "bg-blue-600"} shrink-0`} />
                   )}
                 </button>
               );
@@ -211,7 +208,7 @@ export default function DashboardSidebar({
       </div>
 
       {/* Bottom Section: Pinned UserAccountCard with profile & settings dropdown links */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 shrink-0 z-20">
+      <div className="p-3 border-t border-slate-200 bg-slate-50/50 shrink-0 z-20">
         <UserAccountCard user={user} variant="sidebar" />
       </div>
     </aside>

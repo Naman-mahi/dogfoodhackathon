@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Plus, X, AlertCircle, CheckCircle2, Loader2, GitBranch } from "lucide-react";
 import { submitProject } from "@/lib/api";
 import toast from "react-hot-toast";
+import Select2 from "@/components/Select2";
 
 interface ProjectSubmissionModalProps {
   isOpen?: boolean;
@@ -191,16 +192,18 @@ export default function ProjectSubmissionModal({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Track
                   </label>
-                  <select
+                  <Select2
+                    variant="light"
                     value={formData.track}
-                    onChange={(e) => setFormData({ ...formData, track: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="trk_01">Developer Tools & Infra</option>
-                    <option value="trk_02">Data & Empirical Calibration</option>
-                    <option value="trk_03">Zero-Trust Privacy & Security</option>
-                    <option value="trk_04">Climate & Energy</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, track: val })}
+                    options={[
+                      { value: "trk_01", label: "Developer Tools & Infra" },
+                      { value: "trk_02", label: "Data & Empirical Calibration" },
+                      { value: "trk_03", label: "Zero-Trust Privacy & Security" },
+                      { value: "trk_04", label: "Climate & Energy" },
+                    ]}
+                    isSearchable={true}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">

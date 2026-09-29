@@ -9,6 +9,7 @@ from app.db.models.event import events_table
 from app.db.models.project import projects_table
 from app.db.models.score import scores_table
 from app.db.models.audit import webhooks_table, audit_logs_table
+from app.db.models.registration import event_registrations_table
 from app.api.deps import require_admin, require_organizer, UserSession
 from app.core.security import generate_certificate_signature, verify_certificate_signature
 
@@ -45,17 +46,35 @@ def get_admin_stats(user: UserSession = Depends(require_organizer)):
     """System-level operational statistics for platform operators."""
     with engine.connect() as conn:
         user_count = conn.execute(select(func.count(users_table.c.id))).scalar() or 0
+        participant_count = conn.execute(
+            select(func.count(users_table.c.id)).where(users_table.c.role == "participant")
+        ).scalar() or 0
+        judge_count = conn.execute(
+            select(func.count(users_table.c.id)).where(users_table.c.role == "judge")
+        ).scalar() or 0
+        organizer_count = conn.execute(
+            select(func.count(users_table.c.id)).where(users_table.c.role == "organizer")
+        ).scalar() or 0
+        admin_count = conn.execute(
+            select(func.count(users_table.c.id)).where(users_table.c.role == "admin")
+        ).scalar() or 0
         event_count = conn.execute(select(func.count(events_table.c.id))).scalar() or 0
         project_count = conn.execute(select(func.count(projects_table.c.id))).scalar() or 0
         score_count = conn.execute(select(func.count(scores_table.c.id))).scalar() or 0
+        registration_count = conn.execute(select(func.count(event_registrations_table.c.id))).scalar() or 0
         audit_count = conn.execute(select(func.count(audit_logs_table.c.id))).scalar() or 0
         webhook_count = conn.execute(select(func.count(webhooks_table.c.id))).scalar() or 0
 
     return {
         "users": user_count,
+        "participants": participant_count,
+        "judges": judge_count,
+        "organizers": organizer_count,
+        "admins": admin_count,
         "events": event_count,
         "projects": project_count,
         "scores": score_count,
+        "registrations": registration_count,
         "audit_logs": audit_count,
         "webhooks": webhook_count,
         "mode": "offline-autonomous",
@@ -107,6 +126,47 @@ def update_user_role(
             raise HTTPException(status_code=404, detail="User not found")
 
     return {"user_id": user_id, "new_role": payload.role, "status": "updated"}
+
+class CreateUserAdminRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "admin"
+    bio: Optional[str] = None
+
+@router.post("/users", response_model=UserAdminOut)
+def create_admin_user(
+    payload: CreateUserAdminRequest,
+    user: UserSession = Depends(require_organizer),
+):
+    """Create a user directly with a specified role (admin, organizer, judge, participant)."""
+    valid_roles = ("admin", "organizer", "judge", "participant")
+    if payload.role not in valid_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role '{payload.role}'. Must be one of: {', '.join(valid_roles)}",
+        )
+    existing = AuthService.get_user_by_email(payload.email)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this email already exists.",
+        )
+    created = AuthService.create_user(
+        name=payload.name,
+        email=payload.email,
+        role=payload.role,
+        password=payload.password,
+        bio=payload.bio,
+    )
+    return UserAdminOut(
+        id=created["id"],
+        email=created["email"],
+        name=created["name"],
+        role=created["role"],
+        avatar_url=created.get("avatar_url"),
+        bio=created.get("bio"),
+    )
 
 @router.get("/webhooks", response_model=List[WebhookOut])
 def list_webhooks(organizer=Depends(require_organizer)):

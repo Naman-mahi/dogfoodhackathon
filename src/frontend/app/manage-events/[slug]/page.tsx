@@ -525,7 +525,7 @@ function ManageHackathonContent() {
   const tracksList = event.tracks?.map((t: any) => (typeof t === "string" ? t : t.name || t.id)) || COMMON_TRACKS.slice(0, 3);
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50/30 text-slate-900">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50 text-slate-900">
       {/* Organizer Reusable Sidebar */}
       <DashboardSidebar
         role="organizer"
@@ -732,9 +732,9 @@ function ManageHackathonContent() {
                   <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-bold">
                     <Award className="w-5 h-5" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900">Empirical Bayes Calibration</h3>
+                  <h3 className="text-base font-bold text-slate-900">Score Calibration &amp; Standings</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Evaluations submitted by track judges are regularized with Bayesian shrinkage factor k=2.0 to neutralize judge leniency or harshness.
+                    Evaluations submitted by track judges are automatically calibrated to ensure fair, unbiased scoring across all projects.
                   </p>
                 </div>
                 <div className="space-y-2 pt-4 border-t border-slate-100">

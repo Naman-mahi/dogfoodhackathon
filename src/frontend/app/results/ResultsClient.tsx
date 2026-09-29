@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { fetchCalibratedRankings, CalibrationResponse, CalibrationRanking, HackathonRef } from "@/lib/api";
 import DataTable, { ColumnDef } from "@/components/DataTable";
+import Select2 from "@/components/Select2";
 import toast from "react-hot-toast";
 
 const FALLBACK_HACKATHONS: HackathonRef[] = [
@@ -207,25 +208,25 @@ export default function ResultsClient() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="badge-pill bg-purple-50 text-purple-700 border border-purple-200">
-              Empirical Bayes Engine
+            <span className="badge-pill bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 font-semibold">
+              <Trophy className="w-3.5 h-3.5 text-blue-600" />
+              Live Leaderboard
             </span>
-            <span className="badge-pill bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Zero-Trust Validated
+            <span className="badge-pill bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Calibrated Rankings
             </span>
             {selectedHackathon !== "all" && (
-              <span className="badge-pill bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-                <Trophy className="w-3 h-3 text-blue-600" />
+              <span className="badge-pill bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
                 {activeHackathonName}
               </span>
             )}
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Score Calibration &amp; Leaderboard
+            Competition Results &amp; Standings
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Real-time peer evaluation convergence via Bayesian shrinkage normalization (k=2.0), filtered per hackathon.
+            Real-time score calibration and official leaderboard standings, filtered per hackathon.
           </p>
         </div>
 
@@ -263,37 +264,55 @@ export default function ResultsClient() {
             </div>
           </div>
 
-          {/* Quick Filter Pill Buttons */}
-          <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-            <button
-              type="button"
-              onClick={() => handleSelectHackathon("all")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                selectedHackathon === "all"
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/50"
-                  : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
-              }`}
-            >
-              All Competitions
-            </button>
-            {availableHackathons.map((h) => {
-              const isSelected = selectedHackathon === h.id || selectedHackathon === h.slug;
-              return (
-                <button
-                  key={h.id}
-                  type="button"
-                  onClick={() => handleSelectHackathon(h.slug || h.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer truncate max-w-[200px] ${
-                    isSelected
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/50"
-                      : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
-                  }`}
-                  title={h.name}
-                >
-                  {h.name}
-                </button>
-              );
-            })}
+          {/* Quick Select2 Dropdown and Pill Buttons */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="w-full sm:w-64">
+              <Select2
+                variant="dark"
+                value={selectedHackathon}
+                onChange={(val) => handleSelectHackathon(val)}
+                placeholder="Choose hackathon..."
+                searchPlaceholder="Search competitions..."
+                options={[
+                  { value: "all", label: "All Competitions" },
+                  ...availableHackathons.map((h) => ({
+                    value: h.slug || h.id,
+                    label: h.name,
+                  })),
+                ]}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => handleSelectHackathon("all")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  selectedHackathon === "all"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/50"
+                    : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
+                }`}
+              >
+                All
+              </button>
+              {availableHackathons.map((h) => {
+                const isSelected = selectedHackathon === h.id || selectedHackathon === h.slug;
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => handleSelectHackathon(h.slug || h.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer truncate max-w-[170px] ${
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/50"
+                        : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    }`}
+                    title={h.name}
+                  >
+                    {h.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -348,12 +367,12 @@ export default function ResultsClient() {
               <Trophy className="w-4 h-4 text-amber-500" />
               <span>{activeHackathonName} &mdash; Official Standings</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Rankings dynamically computed via Empirical Bayes shrinkage
+            <p className="text-xs text-slate-500 mt-0.5">
+              Official ranked standings updated in real time from evaluator submissions
             </p>
           </div>
-          <span className="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-            EB = (n&middot;y&#772; + k&middot;&mu;) / (n + k)
+          <span className="text-xs text-slate-600 font-semibold bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+            Live Calibration
           </span>
         </div>
 
@@ -374,12 +393,11 @@ export default function ResultsClient() {
       <div className="card-modern p-6 bg-slate-900 text-white rounded-3xl space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-base font-bold">Zero-Trust Peer Score Isolation Architecture</h3>
+          <h3 className="text-base font-bold">Independent Review &amp; Score Privacy Guard</h3>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed max-w-3xl">
-          In DOGFOOD, evaluations are strictly isolated per judge and per hackathon.
-          The backend enforces database query filtering on <code className="text-emerald-300 bg-slate-800 px-1.5 py-0.5 rounded font-mono">judge = session.user_id</code>.
-          Any unauthorized attempt by a peer to query another judge&apos;s evaluations triggers an instant <code className="text-rose-300 bg-slate-800 px-1.5 py-0.5 rounded font-mono">HTTP 403 Forbidden</code> barrier.
+          In DOGFOOD, evaluations are strictly private and independently submitted by each assigned judge.
+          No evaluator can inspect another reviewer&apos;s pending scores, guaranteeing unbiased, merit-based grading for all submissions.
         </p>
       </div>
     </div>

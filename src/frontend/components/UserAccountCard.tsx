@@ -109,9 +109,9 @@ export default function UserAccountCard({
       <div className="relative w-full" ref={containerRef}>
         {/* Dropdown Menu (pops open above the profile card) */}
         {menuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 w-full bg-[#0a0f1d] border border-slate-800 rounded-2xl p-2 shadow-2xl z-50 space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
-            <div className="px-3 py-2 border-b border-slate-800/80">
-              <p className="text-[11px] font-bold text-white truncate">
+          <div className="absolute bottom-full left-0 right-0 mb-2 w-full bg-white border border-slate-200 rounded-2xl p-2 shadow-xl z-50 space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="px-3 py-2 border-b border-slate-100">
+              <p className="text-[11px] font-bold text-slate-900 truncate">
                 {user?.name || "DOGFOOD Admin"}
               </p>
               <p
@@ -125,9 +125,9 @@ export default function UserAccountCard({
             <Link
               href="/profile"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer group"
             >
-              <UserIcon className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+              <UserIcon className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
               <span>Profile</span>
             </Link>
 
@@ -135,9 +135,9 @@ export default function UserAccountCard({
               <Link
                 href="/admin"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-300 hover:text-white hover:bg-purple-950/40 rounded-xl transition-colors cursor-pointer group"
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded-xl transition-colors cursor-pointer group"
               >
-                <Settings className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                <Settings className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
                 <span>Admin Console</span>
               </Link>
             )}
@@ -146,9 +146,9 @@ export default function UserAccountCard({
             <Link
               href="/certificates"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer group"
             >
-              <BadgeCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <BadgeCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
               <span>My Certificates</span>
             </Link>
 
@@ -156,9 +156,9 @@ export default function UserAccountCard({
             <Link
               href="/settings"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer group"
             >
-              <Settings className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <Settings className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
               <span>Settings</span>
             </Link>
 
@@ -166,21 +166,21 @@ export default function UserAccountCard({
             <Link
               href="/change-password"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer group"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer group"
             >
-              <KeyRound className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              <KeyRound className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
               <span>Change Password</span>
             </Link>
 
-            <div className="border-t border-slate-800/80 my-1" />
+            <div className="border-t border-slate-100 my-1" />
 
             {/* Sign Out */}
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-300 hover:text-rose-300 hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer group"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer group"
             >
-              <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
+              <LogOut className="w-4 h-4 text-rose-500 group-hover:translate-x-0.5 transition-all" />
               <span>Sign Out</span>
             </button>
           </div>
@@ -192,8 +192,8 @@ export default function UserAccountCard({
           onClick={() => setMenuOpen(!menuOpen)}
           className={`w-full flex items-center gap-3 p-2.5 rounded-2xl transition-all cursor-pointer text-left border ${
             menuOpen
-              ? "bg-[#131b2e] border-slate-700 shadow-md"
-              : "bg-[#0a0f1d] hover:bg-[#131b2e] border-slate-800/80"
+              ? "bg-slate-100 border-slate-300 shadow-sm"
+              : "bg-slate-50 hover:bg-slate-100 border-slate-200"
           }`}
           aria-expanded={menuOpen}
           aria-label="User Profile Menu"
@@ -204,7 +204,7 @@ export default function UserAccountCard({
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-white truncate">
+            <p className="text-xs font-bold text-slate-900 truncate">
               {user?.name || "DOGFOOD User"}
             </p>
             <p
@@ -213,7 +213,7 @@ export default function UserAccountCard({
               {role} role
             </p>
           </div>
-          <div className="text-slate-400 pr-1">
+          <div className="text-slate-500 pr-1">
             {menuOpen ? (
               <ChevronDown className="w-4 h-4" />
             ) : (

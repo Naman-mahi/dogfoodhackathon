@@ -44,7 +44,7 @@ export default function Home() {
 
         {/* Subtitle */}
         <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          Robust peer isolation, Empirical Bayes score normalization, and automated certificate generation for modern engineering competitions.
+          Fair evaluation scoring, real-time submission tracking, and automated certificate generation for modern engineering competitions.
         </p>
 
         {/* CTA Buttons */}
@@ -254,12 +254,12 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
-            <h3 className="font-bold text-sm text-slate-900">Zero-Trust Role Isolation</h3>
+            <h3 className="font-bold text-sm text-slate-900">Independent Peer Evaluation</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Judges cannot inspect peer scores or rubrics during the evaluation phase. Every score is committed independently.
+              Judges evaluate submissions independently without reviewer bias. Every score is securely committed.
             </p>
             <Link href="/about" className="inline-block text-xs font-semibold text-blue-600 hover:underline pt-2">
-              Learn about role security &rarr;
+              Learn about evaluation privacy &rarr;
             </Link>
           </div>
 
@@ -267,12 +267,12 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
             </div>
-            <h3 className="font-bold text-sm text-slate-900">Empirical Bayes Calibration</h3>
+            <h3 className="font-bold text-sm text-slate-900">Automated Score Calibration</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Raw judge rubrics are normalized toward global distributions with shrinkage parameter $k=2.0$, preventing harsh bias.
+              Evaluator scores are automatically normalized across tracks and categories to prevent rating variance and bias.
             </p>
             <Link href="/results" className="inline-block text-xs font-semibold text-blue-600 hover:underline pt-2">
-              Read scoring mathematical proof &rarr;
+              View live standings &rarr;
             </Link>
           </div>
 

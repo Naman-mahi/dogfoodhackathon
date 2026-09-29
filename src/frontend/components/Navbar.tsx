@@ -45,17 +45,35 @@ export default function Navbar() {
 
     // 2. Fetch authenticated user from backend
     fetchCurrentUser().then((remote) => {
-      if (remote) setCurrentUser(remote);
+      if (remote) {
+        setCurrentUser(remote);
+      } else if (!local) {
+        setCurrentUser(null);
+      }
     });
 
-    // 3. Listen to local storage changes
+    // 3. Listen to local storage & in-app auth change events
+    const onAuthChange = (e: any) => {
+      if (e.detail) {
+        setCurrentUser(e.detail);
+      } else {
+        const u = getStoredUser();
+        setCurrentUser(u);
+      }
+    };
+
     const onStorage = () => {
       const u = getStoredUser();
-      if (u) setCurrentUser(u);
+      setCurrentUser(u);
     };
+
+    window.addEventListener("dogfood_auth_change", onAuthChange);
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    return () => {
+      window.removeEventListener("dogfood_auth_change", onAuthChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [pathname]);
 
   // Close dropdown on click outside or Escape
   useEffect(() => {
@@ -157,6 +175,7 @@ export default function Navbar() {
   }
 
   const getRoleRingClass = (role?: string) => {
+    if (role === "admin") return "ring-purple-600 text-purple-700 bg-purple-100";
     if (role === "organizer") return "ring-purple-400/40 text-purple-600 bg-purple-50";
     if (role === "judge") return "ring-blue-400/40 text-blue-600 bg-blue-50";
     return "ring-emerald-400/40 text-emerald-600 bg-emerald-50";
@@ -264,7 +283,7 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : !isSidebarPage ? (
             <div className="flex items-center space-x-2">
               <Link
                 href="/login"
@@ -279,7 +298,7 @@ export default function Navbar() {
                 Register
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Mobile Menu Hamburger Button */}

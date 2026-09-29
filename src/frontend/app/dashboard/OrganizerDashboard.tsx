@@ -21,6 +21,7 @@ import {
   Loader2,
   Calendar,
   Award,
+  Settings,
   UserPlus,
   ShieldCheck,
   Check,
@@ -39,12 +40,15 @@ import {
   deleteJudge,
   updateEvent,
   fetchProjects,
+  fetchPlatformStats,
   isEventRegistrationOpen,
   JudgeData,
   Project,
+  PlatformStats,
 } from "../../lib/api";
 import { Hackathon } from "../../lib/types";
 import DataTable, { ColumnDef } from "../../components/DataTable";
+import Select2 from "../../components/Select2";
 
 export type OrganizerTab =
   | "overview"
@@ -104,6 +108,9 @@ export default function OrganizerDashboard({
   // Projects management state
   const [projectsList, setProjectsList] = useState<Project[]>([]);
 
+  // Platform database statistics
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
+
   // New judge form state
   const [newJudgeId, setNewJudgeId] = useState("");
   const [newJudgeName, setNewJudgeName] = useState("");
@@ -162,6 +169,10 @@ export default function OrganizerDashboard({
 
     fetchProjects().then((projs) => {
       setProjectsList(projs || []);
+    });
+
+    fetchPlatformStats().then((st) => {
+      if (st) setPlatformStats(st);
     });
   }, []);
 
@@ -544,65 +555,105 @@ export default function OrganizerDashboard({
               </div>
             </div>
 
+            {/* Account Profile & Live Engine Card */}
+            <div className="card-modern p-6 bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-purple-100 border border-purple-200 text-purple-700 flex items-center justify-center font-black text-xl shrink-0 shadow-2xs">
+                  {user?.name ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : "DF"}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-black text-slate-900 tracking-tight">
+                      {user?.name || "DOGFOOD Foundation Admin"}
+                    </h2>
+                    <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                      {user?.role || "organizer"} role
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Verified Session
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-mono">
+                    Account: {user?.email || "organizer@dogfood.dev"} &bull; User ID: {user?.user_id || "org_01"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link
+                  href="/profile"
+                  className="btn-secondary text-xs py-2 px-3.5 rounded-xl font-semibold flex items-center gap-1.5 text-slate-700 hover:text-black cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Profile</span>
+                </Link>
+                <Link
+                  href="/change-password"
+                  className="btn-secondary text-xs py-2 px-3.5 rounded-xl font-semibold flex items-center gap-1.5 text-slate-700 hover:text-black cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Security</span>
+                </Link>
+                {(user?.role === "admin" || user?.role === "organizer") && (
+                  <Link
+                    href="/admin"
+                    className="btn-primary text-xs py-2 px-4 rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Admin Console</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
             {(() => {
-              const totalParticipants = events.reduce((sum, e) => sum + (e.participantCount || 0), 0);
+              // Real Database Metrics (eliminates fake 5,380 and 131 mock numbers)
+              const realParticipants = platformStats?.participants ?? platformStats?.registrations ?? 0;
+              const realEvents = platformStats?.events ?? events.length;
+              const realSubmissions = platformStats?.projects ?? projectsList.length;
+              const realJudges = platformStats?.judges ?? judges.length;
               const activeRegCount = events.filter((e) => isEventRegistrationOpen(e).isOpen).length;
               const allTrackNames = Array.from(new Set(events.flatMap((e) => (e.tracks || []).map((t) => t.name))));
               const assignedTrackNames = Array.from(new Set(judges.flatMap((j) => j.tracks || [])));
               const coveragePct = allTrackNames.length > 0 ? Math.round((assignedTrackNames.length / allTrackNames.length) * 100) : 100;
-              const totalSubmissions = events.reduce((sum, e) => sum + (e.submissionCount || 0), 0) || 40;
 
               return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div className="card-modern p-5 border-l-4 border-l-purple-500 space-y-1 bg-white">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Total Hackathons</div>
-                    <div className="text-2xl font-black text-slate-900">{events.length} Events</div>
+                    <div className="text-2xl font-black text-slate-900">{realEvents} Events</div>
                     <div className="text-[11px] text-purple-700 font-semibold">{activeRegCount} Open Registrations</div>
                   </div>
 
                   <div className="card-modern p-5 border-l-4 border-l-blue-500 space-y-1 bg-white">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Total Competitors</div>
-                    <div className="text-2xl font-black text-slate-900">{totalParticipants.toLocaleString()} Builders</div>
-                    <div className="text-[11px] text-slate-500">Across all platform events</div>
+                    <div className="text-2xl font-black text-slate-900">{realParticipants.toLocaleString()} Builders</div>
+                    <div className="text-[11px] text-slate-500">Verified database registrations</div>
                   </div>
 
                   <div className="card-modern p-5 border-l-4 border-l-indigo-500 space-y-1 bg-white">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Total Submissions</div>
-                    <div className="text-2xl font-black text-slate-900">{totalSubmissions} Builds</div>
-                    <div className="text-[11px] text-slate-500">Verified codebase entries</div>
+                    <div className="text-2xl font-black text-slate-900">{realSubmissions} Builds</div>
+                    <div className="text-[11px] text-slate-500">Live codebase entries</div>
                   </div>
 
                   <div className="card-modern p-5 border-l-4 border-l-emerald-500 space-y-1 bg-white">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Registered Judges</div>
-                    <div className="text-2xl font-black text-slate-900">{judges.length} Evaluators</div>
+                    <div className="text-2xl font-black text-slate-900">{realJudges} Evaluators</div>
                     <div className="text-[11px] text-emerald-700 font-medium">{coveragePct}% Track Coverage</div>
                   </div>
 
                   <div className="card-modern p-5 border-l-4 border-l-amber-500 space-y-1 bg-white">
                     <div className="text-[10px] uppercase font-bold text-slate-400">Score Calibration</div>
-                    <div className="text-2xl font-black text-slate-900 font-mono">EB k = 2.0</div>
+                    <div className="text-2xl font-black text-slate-900">Calibrated</div>
                     <Link href="/results" className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1">
-                      View Calibration &rarr;
+                      View Leaderboard &rarr;
                     </Link>
                   </div>
                 </div>
               );
             })()}
-
-            <div className="card-modern p-6 space-y-3">
-              <h2 className="text-sm font-bold text-slate-900">Operational Highlights</h2>
-              <div className="text-xs text-slate-600 leading-relaxed space-y-2">
-                <p>
-                  • <strong>Role Access Isolation</strong>: Only participants can register for hackathons. Organizers and judges are restricted from entering as competitors.
-                </p>
-                <p>
-                  • <strong>Registration Deadlines</strong>: Passed deadlines automatically close registration both in the backend API and across all public cards and detail views.
-                </p>
-                <p>
-                  • <strong>Zero-Trust Anonymity</strong>: Evaluators cannot read peer scores. Inter-judge queries return HTTP 403 Forbidden.
-                </p>
-              </div>
-            </div>
 
             {/* Quick Navigation Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -813,19 +864,20 @@ export default function OrganizerDashboard({
 
               {/* Actions & Hackathon Selector */}
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-600">Select Hackathon:</span>
-                  <select
-                    value={selectedHackathonSlug}
-                    onChange={(e) => setSelectedHackathonSlug(e.target.value)}
-                    className="input-field text-xs py-1.5 px-3 bg-white font-bold text-slate-800 border-slate-300"
-                  >
-                    {events.map((ev) => (
-                      <option key={ev.id} value={ev.slug || ev.id}>
-                        {ev.title || ev.name} ({ev.id})
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-2 min-w-[280px]">
+                  <span className="text-xs font-semibold text-slate-600 shrink-0">Select Hackathon:</span>
+                  <div className="flex-1">
+                    <Select2
+                      variant="light"
+                      value={selectedHackathonSlug}
+                      onChange={setSelectedHackathonSlug}
+                      options={events.map((ev) => ({
+                        value: ev.slug || ev.id,
+                        label: `${ev.title || ev.name} (${ev.id})`,
+                      }))}
+                      isSearchable={true}
+                    />
+                  </div>
                 </div>
 
                 <button
@@ -947,26 +999,24 @@ export default function OrganizerDashboard({
                       {/* Add Judge to Track Dropdown */}
                       {unassignedJudges.length > 0 && (
                         <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
-                          <select
-                            defaultValue=""
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                const j = judges.find((x) => x.id === e.target.value);
-                                if (j) handleToggleJudgeTrack(j, trackName);
-                                e.target.value = "";
-                              }
-                            }}
-                            className="input-field text-xs py-1.5 px-3 flex-1 bg-slate-50 border-slate-200 font-medium"
-                          >
-                            <option value="" disabled>
-                              + Assign another judge...
-                            </option>
-                            {unassignedJudges.map((j) => (
-                              <option key={j.id} value={j.id}>
-                                {j.name} ({j.id})
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex-1">
+                            <Select2
+                              variant="light"
+                              placeholder="+ Assign another judge..."
+                              value=""
+                              onChange={(val) => {
+                                if (val) {
+                                  const j = judges.find((x) => x.id === val);
+                                  if (j) handleToggleJudgeTrack(j, trackName);
+                                }
+                              }}
+                              options={unassignedJudges.map((j) => ({
+                                value: j.id,
+                                label: `${j.name} (${j.id})`,
+                              }))}
+                              isSearchable={true}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -999,17 +1049,18 @@ export default function OrganizerDashboard({
                 <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Competition Event</div>
                 <div className="text-xs text-slate-500">Configure submissions window and deadline for a specific event.</div>
               </div>
-              <select
-                value={selectedHackathonSlug}
-                onChange={(e) => setSelectedHackathonSlug(e.target.value)}
-                className="input-field text-xs py-2 px-3 font-semibold text-slate-900 bg-slate-50 border-slate-200 rounded-xl"
-              >
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.slug || ev.id}>
-                    {ev.title || ev.name} ({ev.slug || ev.id})
-                  </option>
-                ))}
-              </select>
+              <div className="w-72">
+                <Select2
+                  variant="light"
+                  value={selectedHackathonSlug}
+                  onChange={setSelectedHackathonSlug}
+                  options={events.map((ev) => ({
+                    value: ev.slug || ev.id,
+                    label: `${ev.title || ev.name} (${ev.slug || ev.id})`,
+                  }))}
+                  isSearchable={true}
+                />
+              </div>
             </div>
 
             {activeHackathon && (
@@ -1081,11 +1132,12 @@ export default function OrganizerDashboard({
         )}
 
         {/* ── RUBRIC & WEIGHTS TAB ── */}
+        {/* ── RUBRIC TAB ── */}
         {activeTab === "rubric" && (
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Scoring Rubric &amp; Weights</h1>
-              <p className="text-xs text-slate-500">Configure criterion weights for normalized composite scoring (Tier 2 requirement).</p>
+              <p className="text-xs text-slate-500">Configure criterion weights for normalized composite scoring across rubric categories.</p>
             </div>
 
             <div className="card-modern p-6 space-y-5">
@@ -1136,7 +1188,7 @@ export default function OrganizerDashboard({
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Judge Evaluation Progress</h1>
-              <p className="text-xs text-slate-500">Monitor individual evaluator queues and track assignments while maintaining zero-trust isolation.</p>
+              <p className="text-xs text-slate-500">Monitor individual evaluator queues and track assignments with independent scoring.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1177,7 +1229,7 @@ export default function OrganizerDashboard({
         {activeTab === "exports" && (
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Exports & Score Matrices</h1>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Exports &amp; Score Matrices</h1>
               <p className="text-xs text-slate-500">Download verified score matrices and inspect calibrated final rankings.</p>
             </div>
 
@@ -1186,7 +1238,7 @@ export default function OrganizerDashboard({
                 <FileSpreadsheet className="w-8 h-8 text-emerald-600" />
                 <h3 className="text-sm font-bold text-slate-900">Official CSV Score Matrix</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Export complete score matrix verified under Tier 2 specifications via <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">/api/export.csv</code>.
+                  Export complete score and ranking matrix via <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">/api/export.csv</code>.
                 </p>
                 <a
                   href="/api/export.csv"
@@ -1199,15 +1251,15 @@ export default function OrganizerDashboard({
 
               <div className="card-modern p-6 space-y-3">
                 <TrendingUp className="w-8 h-8 text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900">Empirical Bayes Leaderboard</h3>
+                <h3 className="text-sm font-bold text-slate-900">Competition Leaderboard</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Review raw vs shrinkage-adjusted scores to eliminate judge bias across review batches.
+                  Review calibrated scores and composite rankings across all project categories.
                 </p>
                 <Link
                   href="/results"
                   className="btn-secondary text-xs py-2 px-4 text-slate-700 hover:text-black inline-flex items-center gap-1.5"
                 >
-                  View Calibration Leaderboard <ChevronRight className="w-3.5 h-3.5" />
+                  View Leaderboard <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>

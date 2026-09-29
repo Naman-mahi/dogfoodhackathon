@@ -26,6 +26,7 @@ import {
 import { AuthUser, getStoredUser, fetchCurrentUser } from "@/lib/auth";
 import toast from "react-hot-toast";
 import DataTable, { ColumnDef } from "@/components/DataTable";
+import Select2 from "@/components/Select2";
 
 interface UserItem {
   id: string;
@@ -97,6 +98,46 @@ function AdminConsoleContent() {
   // Webhook form
   const [newWebhook, setNewWebhook] = useState({ event_type: "project.submitted", target_url: "", secret: "" });
   const [creatingWebhook, setCreatingWebhook] = useState(false);
+
+  // Create user modal
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "admin",
+    bio: "",
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserData.name || !newUserData.email || !newUserData.password) {
+      toast.error("Please fill in name, email, and password.");
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      const res = await fetch("/api/v1/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUserData),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to create user.");
+      }
+      const created = await res.json();
+      setUsers((prev) => [created, ...prev]);
+      setShowCreateUserModal(false);
+      setNewUserData({ name: "", email: "", password: "", role: "admin", bio: "" });
+      toast.success(`User created successfully as ${created.name} (${created.role})!`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create user.");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
 
   useEffect(() => {
     async function init() {
@@ -250,16 +291,20 @@ function AdminConsoleContent() {
       className: "text-right",
       headerClassName: "text-right",
       render: (u) => (
-        <select
-          value={u.role}
-          onChange={(e) => handleRoleChange(u.id, e.target.value)}
-          className="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 shadow-xs focus:ring-2 focus:ring-purple-400 focus:outline-none cursor-pointer"
-        >
-          <option value="participant">Participant</option>
-          <option value="judge">Judge</option>
-          <option value="organizer">Organizer</option>
-          <option value="admin">Admin</option>
-        </select>
+        <div className="w-36 ml-auto">
+          <Select2
+            variant="light"
+            value={u.role}
+            onChange={(val) => handleRoleChange(u.id, val)}
+            options={[
+              { value: "participant", label: "Participant" },
+              { value: "judge", label: "Judge" },
+              { value: "organizer", label: "Organizer" },
+              { value: "admin", label: "Admin" },
+            ]}
+            isSearchable={false}
+          />
+        </div>
       ),
     },
   ];
@@ -458,16 +503,16 @@ function AdminConsoleContent() {
             <div className="card-modern p-6 space-y-4">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                Zero-Trust Role Enforcement Architecture
+                Role-Based Access Enforcement Architecture
               </h2>
               <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
                 <p>
-                  The DOGFOOD platform enforces zero-trust backend authorization. Role isolation is verified at the HTTP dependency layer:
+                  The DOGFOOD platform enforces strict backend role authorization. Role isolation is verified at the HTTP dependency layer:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-slate-500">
                   <li><strong>Admin</strong>: Complete platform oversight, role mutation, and audit access.</li>
                   <li><strong>Organizer</strong>: Hackathon creation, rubric calibration, and CSV matrix export.</li>
-                  <li><strong>Judge</strong>: Double-blind peer evaluations; peer score queries trigger instant <code className="text-rose-600 font-mono">HTTP 403</code>.</li>
+                  <li><strong>Judge</strong>: Independent evaluations; peer score queries trigger instant <code className="text-rose-600 font-mono">HTTP 403</code>.</li>
                   <li><strong>Participant</strong>: Team formation, draft/edit submissions, and public gallery voting.</li>
                 </ul>
               </div>
@@ -500,14 +545,31 @@ function AdminConsoleContent() {
 
       {/* Tab 2: User & Role Management */}
       {activeTab === "users" && (
-        <DataTable<UserItem>
-          data={users}
-          columns={userColumns}
-          title="Registered Platform Users &amp; Roles"
-          subtitle="Elevate or modify user authorization roles in real time. Changes take effect on the next session request."
-          searchPlaceholder="Search users by name, email, or role..."
-          pageSize={10}
-        />
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Platform Users &amp; Role Management</h2>
+              <p className="text-xs text-slate-500">Elevate or modify user authorization roles in real time or provision dedicated admin accounts.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCreateUserModal(true)}
+              className="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 font-bold cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add User / Admin</span>
+            </button>
+          </div>
+
+          <DataTable<UserItem>
+            data={users}
+            columns={userColumns}
+            title="Registered Platform Users &amp; Roles"
+            subtitle="Elevate or modify user authorization roles in real time. Changes take effect on the next session request."
+            searchPlaceholder="Search users by name, email, or role..."
+            pageSize={10}
+          />
+        </div>
       )}
 
       {/* Tab 3: Live Audit Logs */}
@@ -535,16 +597,18 @@ function AdminConsoleContent() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Event Type</label>
-                <select
+                <Select2
+                  variant="light"
                   value={newWebhook.event_type}
-                  onChange={(e) => setNewWebhook({ ...newWebhook, event_type: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="project.submitted">project.submitted</option>
-                  <option value="score.calibrated">score.calibrated</option>
-                  <option value="hackathon.published">hackathon.published</option>
-                  <option value="judge.assigned">judge.assigned</option>
-                </select>
+                  onChange={(val) => setNewWebhook({ ...newWebhook, event_type: val })}
+                  options={[
+                    { value: "project.submitted", label: "project.submitted" },
+                    { value: "score.calibrated", label: "score.calibrated" },
+                    { value: "hackathon.published", label: "hackathon.published" },
+                    { value: "judge.assigned", label: "judge.assigned" },
+                  ]}
+                  isSearchable={false}
+                />
               </div>
 
               <div>
@@ -591,6 +655,114 @@ function AdminConsoleContent() {
             pageSize={10}
             emptyMessage="No webhooks configured. Register a target URL above to receive automated dispatch events."
           />
+        </div>
+      )}
+
+      {/* Add User / Admin Modal */}
+      {showCreateUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Provision User Account</h3>
+                  <p className="text-xs text-slate-500">Create an admin, organizer, judge, or participant</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateUserModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sarah Connor"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="admin.sarah@dogfood.internal"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Minimum 6 characters"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Platform Role</label>
+                <Select2
+                  variant="light"
+                  value={newUserData.role}
+                  onChange={(val) => setNewUserData({ ...newUserData, role: val })}
+                  options={[
+                    { value: "admin", label: "👑 System Administrator (Root Access)" },
+                    { value: "organizer", label: "🎯 Organizer (Event & Rubric Control)" },
+                    { value: "judge", label: "⚖️ Judge (Submission Evaluator)" },
+                    { value: "participant", label: "💻 Participant (Builder & Team Member)" },
+                  ]}
+                  isSearchable={false}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Bio / Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Operations lead for APAC hackathons"
+                  value={newUserData.bio}
+                  onChange={(e) => setNewUserData({ ...newUserData, bio: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateUserModal(false)}
+                  className="btn-secondary text-xs py-2.5 px-4 rounded-xl font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="btn-primary text-xs py-2.5 px-5 rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                >
+                  {creatingUser ? "Creating..." : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

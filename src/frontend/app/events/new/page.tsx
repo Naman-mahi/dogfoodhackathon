@@ -51,7 +51,7 @@ export default function NewEventPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50/30">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] w-full bg-slate-50 text-slate-900">
       {/* Reusable Organizer Sidebar — "Create Hackathon" item highlighted via pathname */}
       <DashboardSidebar
         role="organizer"
@@ -61,7 +61,7 @@ export default function NewEventPage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 lg:p-10 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <Link href="/dashboard"
             className="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1.5 transition-colors">

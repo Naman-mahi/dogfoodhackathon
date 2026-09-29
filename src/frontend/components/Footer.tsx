@@ -20,11 +20,18 @@ export default function Footer() {
   }, []);
 
   // The footer is shown on all visitor and public user routes (/, /hackathons, /projects, /results, /about, /events, etc.)
-  // It is only omitted on internal console/dashboard workspace screens where sidebars or full consoles are active.
+  // It is omitted on internal console/dashboard workspace screens where sidebars or full consoles are active.
   const isDashboardWorkspace =
     pathname === "/dashboard" ||
     pathname.startsWith("/dashboard/") ||
     pathname === "/events/new" ||
+    pathname === "/manage-events" ||
+    pathname === "/manage-judges" ||
+    pathname === "/hackathon-judges" ||
+    pathname === "/manage-evaluations" ||
+    pathname === "/rubric-weights" ||
+    pathname === "/judge-progress" ||
+    pathname === "/export-reports" ||
     pathname.startsWith("/organizer") ||
     pathname.startsWith("/judge") ||
     pathname.startsWith("/admin") ||
@@ -35,7 +42,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 text-slate-600 text-xs">
+    <footer className="mt-auto bg-slate-50 border-t border-slate-200 text-slate-600 text-xs">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
           {/* Brand info */}
@@ -46,7 +53,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-slate-500 leading-relaxed max-w-sm">
-              The hackathon innovation and evaluation platform. Powered by blind peer review, zero-trust role isolation, and Empirical Bayes score calibration.
+              The hackathon innovation and evaluation platform. Production-ready judging management, real-time submission tracking, and automated score calibration.
             </p>
             <div className="flex items-center space-x-3 text-slate-400">
               <span className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-700 hover:text-blue-600 cursor-pointer">
@@ -84,8 +91,8 @@ export default function Footer() {
               Platform & Tech
             </h4>
             <ul className="space-y-2 text-slate-600">
-              <li><Link href="/about" className="hover:text-blue-600">Empirical Bayes Calibration</Link></li>
-              <li><Link href="/about" className="hover:text-blue-600">Zero-Trust Role Isolation</Link></li>
+              <li><Link href="/results" className="hover:text-blue-600">Score Calibration</Link></li>
+              <li><Link href="/about" className="hover:text-blue-600">Role-Based Access Control</Link></li>
               <li><Link href="/events?id=sample-hack-2026&tab=rules" className="hover:text-blue-600">Rules &amp; Eligibility</Link></li>
               <li><Link href="/events?id=sample-hack-2026&tab=prizes" className="hover:text-blue-600">Prizes &amp; Accolades</Link></li>
             </ul>

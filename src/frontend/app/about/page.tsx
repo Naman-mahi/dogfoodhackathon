@@ -14,7 +14,7 @@ export default function AboutPage() {
           The Hackathon Platform That <span className="text-blue-600">Judges You</span>
         </h1>
         <p className="text-slate-600 text-base max-w-2xl mx-auto leading-relaxed">
-          DOGFOOD is an open-source, self-hostable submission and judging platform engineered for offline resilience, rigorous Bayesian score calibration, and zero-trust backend role isolation.
+          DOGFOOD is an open-source hackathon submission and judging platform engineered for offline resilience, calibrated evaluation scoring, and secure role-based access control.
         </p>
       </div>
 
@@ -24,7 +24,7 @@ export default function AboutPage() {
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Zap className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-slate-900">The One-Command Rule</h3>
+          <h3 className="text-base font-bold text-slate-900">Self-Contained Appliance</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
             Spins up completely offline on port 8080 with zero external cloud dependencies. A deterministic appliance that seeds fixtures instantly.
           </p>
@@ -34,9 +34,9 @@ export default function AboutPage() {
           <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-slate-900">Zero-Trust Role Isolation</h3>
+          <h3 className="text-base font-bold text-slate-900">Role-Based Access Control</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Hiding buttons is zero security. Authorization gates at the database and HTTP layer prevent judges from peeking at peer scores.
+            Authorization gates at the API and database layers enforce strict separation between participants, evaluators, and organizers.
           </p>
         </div>
 
@@ -44,9 +44,9 @@ export default function AboutPage() {
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <Scale className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-slate-900">Empirical Bayes Normalization</h3>
+          <h3 className="text-base font-bold text-slate-900">Score Normalization &amp; Calibration</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Eliminates judge severity bias and protects against zero-variance scores and dropout reviewers with prior shrinkage ($k=2.0$).
+            Eliminates reviewer variance and protects against uneven grading distributions across evaluation batches.
           </p>
         </div>
       </div>
@@ -56,10 +56,10 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold text-slate-900">How It Works</h2>
         <div className="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
           <p>
-            At competitive hackathons, raw average scores break down: lenient judges give high marks to mediocre projects, while harsh judges penalize brilliant builds. Furthermore, judges may drop out or score flat 4.0s across their entire batch.
+            At competitive hackathons, raw average scores break down: lenient judges give high marks to mediocre projects, while harsh judges penalize brilliant builds. Furthermore, judges may score unevenly across their batch.
           </p>
           <p>
-            DOGFOOD solves this by standardizing review distributions using Empirical Bayes shrinkage toward global priors. Every project receives an unbiased, calibrated score that organizer consoles can export with cryptographic audit trails.
+            DOGFOOD solves this by standardizing review distributions using automated score calibration. Every project receives an unbiased, calibrated score that organizer consoles can export instantly.
           </p>
         </div>
         <div className="pt-4 flex flex-wrap gap-3">

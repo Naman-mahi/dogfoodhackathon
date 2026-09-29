@@ -20,6 +20,7 @@ import {
 import { AuthUser } from "../../lib/auth";
 import DashboardSidebar, { JUDGE_NAV } from "../../components/DashboardSidebar";
 import DataTable, { ColumnDef } from "../../components/DataTable";
+import Select2 from "../../components/Select2";
 import { fetchProjects, fetchJudgeScores, fetchJudges, submitJudgeScore, Project, JudgeScoreRecord } from "../../lib/api";
 import toast from "react-hot-toast";
 
@@ -292,9 +293,9 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
     try {
       const res = await fetch("/api/v1/judge/scores?judge=jdg_02", { credentials: "include" });
       if (res.status === 403 || res.status === 401) {
-        const text = "VERIFIED: Backend strictly returned HTTP 403 Forbidden. Peer isolation is cryptographically enforced (Tier 2 verified).";
+        const text = "VERIFIED: Backend strictly returned HTTP 403 Forbidden. Independent scoring privacy is enforced.";
         setPeerIsolationResult(text);
-        toast.success("Peer score isolation strictly verified (HTTP 403 Forbidden).");
+        toast.success("Peer score privacy strictly verified (HTTP 403 Forbidden).");
       } else if (res.status === 200) {
         const text = "WARNING: Endpoint returned 200 OK. Peer scores should be forbidden.";
         setPeerIsolationResult(text);
@@ -397,18 +398,18 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
               </div>
 
               {availableTracks.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-slate-400" />
-                  <select
+                <div className="flex items-center gap-2 w-52 shrink-0">
+                  <Select2
+                    variant="light"
                     value={trackFilter}
-                    onChange={(e) => setTrackFilter(e.target.value)}
-                    className="input-field text-xs py-2 px-3 bg-white border-slate-200"
-                  >
-                    <option value="all">All Tracks ({projects.length})</option>
-                    {availableTracks.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                    onChange={setTrackFilter}
+                    options={[
+                      { value: "all", label: `All Tracks (${projects.length})` },
+                      ...availableTracks.map((t) => ({ value: t, label: t })),
+                    ]}
+                    isSearchable={true}
+                    placeholder="Filter by track..."
+                  />
                 </div>
               )}
             </div>
@@ -472,8 +473,8 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
         {activeTab === "isolation" && (
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Zero-Trust Peer Isolation Verification</h1>
-              <p className="text-xs text-slate-500">Cryptographic audit proving judges cannot access or influence each other&apos;s scores.</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Independent Evaluator Privacy Verification</h1>
+              <p className="text-xs text-slate-500">System verification ensuring evaluators cannot access or influence each other&apos;s score records.</p>
             </div>
 
             <div className="card-modern p-6 space-y-4 bg-white">
@@ -482,7 +483,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">RFC Peer Isolation Guarantee</h2>
+                  <h2 className="text-sm font-bold text-slate-900">Independent Review Privacy Guarantee</h2>
                   <p className="text-xs text-slate-500">HTTP 403 Forbidden is strictly enforced at the database proxy layer.</p>
                 </div>
               </div>
@@ -533,7 +534,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
           <div className="space-y-6">
             <div className="border-b border-slate-200 pb-5">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Judging Rubric Standards</h1>
-              <p className="text-xs text-slate-500">Tier 2 three-factor evaluation rubric definitions.</p>
+              <p className="text-xs text-slate-500">Official evaluation rubric criteria and scoring guidelines.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
