@@ -6,6 +6,7 @@ import { MessageSquare, Send, User, Loader2, LogIn, ShieldAlert } from "lucide-r
 import { getStoredUser, AuthUser } from "@/lib/auth";
 import { getAuthHeaders } from "@/lib/api";
 import toast from "react-hot-toast";
+import { formatDateSafe } from "@/lib/dateUtils";
 
 interface CommentItem {
   id: number;
@@ -177,7 +178,7 @@ export default function ProjectComments({ projectId }: { projectId: string }) {
                   <span className="text-xs font-bold text-slate-900">{c.author_name}</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  {c.created_at ? new Date(c.created_at).toLocaleDateString() : "Just now"}
+                  {formatDateSafe(c.created_at, "Just now")}
                 </span>
               </div>
               <p className="text-xs text-slate-700 leading-relaxed pl-8">

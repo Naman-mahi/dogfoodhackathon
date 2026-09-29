@@ -7,6 +7,21 @@ from app.core.exceptions import PeerIsolationViolationException, ForbiddenExcept
 
 router = APIRouter(prefix="/judge/scores", tags=["Judging & Scores"])
 
+@router.get("/progress")
+def get_evaluation_progress(user: UserSession = Depends(require_auth)):
+    """
+    Returns real-time dynamic evaluation progress for all judges or the caller's queue.
+    Organizers and Admins can see full progress for all evaluators;
+    Judges only see their own queue and evaluated progress (preserving peer isolation).
+    """
+    if user.role not in ("judge", "organizer", "admin"):
+        raise ForbiddenException("Forbidden: Evaluator, Organizer, or Admin credentials required")
+    is_org = user.role in ("organizer", "admin")
+    return JudgingService.get_evaluation_progress(
+        authenticated_user_id=user.user_id,
+        is_organizer=is_org,
+    )
+
 @router.get("", response_model=List[ScoreOut])
 def get_judge_scores(
     judge: Optional[str] = Query(None, description="Target judge ID to inspect"),

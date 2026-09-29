@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { AuthUser, getStoredUser, fetchCurrentUser } from "@/lib/auth";
 import { fetchMyCertificates, Certificate } from "@/lib/api";
+import { formatDateSafe } from "@/lib/dateUtils";
 
 function CertificateBadge({ cert, role }: { cert: Certificate; role: string }) {
   const isJudge = cert.recipient_type === "judge";
@@ -49,13 +50,7 @@ function CertificateBadge({ cert, role }: { cert: Certificate; role: string }) {
     ? "Organizer Certificate"
     : "Participation Certificate";
 
-  const issued = cert.issued_at
-    ? new Date(cert.issued_at).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "—";
+  const issued = formatDateSafe(cert.issued_at, "—");
 
   return (
     <div

@@ -3,6 +3,7 @@ export type { Hackathon, Project } from "./types";
 
 // Local aliases for use within this file
 import type { Hackathon, Project } from "./types";
+import { formatDateSafe, parseSafeDate } from "./dateUtils";
 
 export type EventData = Hackathon;
 
@@ -354,12 +355,12 @@ export function isEventRegistrationOpen(hackathon: {
 
   if (!deadlineStr) return { isOpen: true };
 
-  const deadline = new Date(deadlineStr);
-  if (isNaN(deadline.getTime())) return { isOpen: true };
+  const deadline = parseSafeDate(deadlineStr);
+  if (!deadline) return { isOpen: true };
 
   const now = new Date();
   if (now > deadline) {
-    const formatted = deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const formatted = formatDateSafe(deadline, "recently", false);
     return {
       isOpen: false,
       reason: `Registration deadline passed on ${formatted}.`,
@@ -571,7 +572,7 @@ export function formatEventObject(ev: any): Hackathon {
     prizeDisplay: ev.prize_display || (prizeAmt > 0 ? `$${prizeAmt.toLocaleString()} USD` : "Open Pool"),
     participantCount: ev.participant_count ?? 0,
     submissionCount: ev.submission_count ?? 0,
-    deadlineDisplay: ev.deadline_display || (ev.submissions_close ? `Closes ${new Date(ev.submissions_close).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Ongoing"),
+    deadlineDisplay: ev.deadline_display || (ev.submissions_close ? `Closes ${formatDateSafe(ev.submissions_close, "Ongoing", false)}` : "Ongoing"),
     gradient: ev.gradient || "from-blue-600 via-indigo-600 to-sky-500",
     communityLinks: ev.community_links || { website: "https://dogfood.dev" },
     overview: ev.overview || { description: ev.tagline || "", highlights: [] },
@@ -671,22 +672,98 @@ export async function fetchJudgeScores(): Promise<JudgeScoreRecord[]> {
   return [];
 }
 
+export interface JudgeProgressItem {
+  id: string;
+  name: string;
+  email: string;
+  tracks: string[];
+  total_assigned: number;
+  total_scored: number;
+  progress_percentage: number;
+  status: "Completed" | "In Progress" | "Not Started";
+  scored_projects: {
+    project_id: string;
+    project_title: string;
+    track: string;
+    team: string;
+    average_score: number;
+    criteria: Record<string, number>;
+    comment: string;
+    scored_at?: string;
+  }[];
+  pending_projects: {
+    project_id: string;
+    project_title: string;
+    track: string;
+    team: string;
+  }[];
+}
+
+export interface JudgeEvaluationProgressResponse {
+  summary: {
+    total_judges: number;
+    total_projects: number;
+    total_evaluations_submitted: number;
+    total_evaluations_assigned: number;
+    overall_completion_rate: number;
+    completed_judges_count: number;
+    in_progress_judges_count: number;
+    not_started_judges_count: number;
+  };
+  judges: JudgeProgressItem[];
+}
+
+export async function fetchJudgeEvaluationProgress(): Promise<JudgeEvaluationProgressResponse | null> {
+  try {
+    const headers = getAuthHeaders();
+    const res = await fetch(`/api/v1/judge/scores/progress`, {
+      headers,
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("fetchJudgeEvaluationProgress error:", err);
+  }
+  return null;
+}
+
 export async function submitJudgeScore(payload: {
   project: string;
   criteria: Record<string, number>;
   comment?: string;
+  judge?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
+    let judgeId = payload.judge;
+    if (!judgeId && typeof window !== "undefined") {
+      try {
+        const u = localStorage.getItem("dogfood_user");
+        if (u) {
+          const parsed = JSON.parse(u);
+          judgeId = parsed.user_id;
+        }
+      } catch {}
+    }
+    const finalPayload = {
+      judge: judgeId || "jdg_01",
+      ...payload,
+    };
     const headers = getAuthHeaders();
     const res = await fetch(`/api/v1/judge/scores`, {
       method: "POST",
       headers,
       credentials: "include",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(finalPayload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { success: false, error: data.detail || "Failed to submit score" };
+      const errDetail = Array.isArray(data.detail)
+        ? data.detail.map((e: any) => `${e.loc?.join(".")}: ${e.msg}`).join("; ")
+        : data.detail || (typeof data === "object" ? JSON.stringify(data) : "Failed to submit score");
+      return { success: false, error: errDetail };
     }
     return { success: true, data };
   } catch (err: any) {

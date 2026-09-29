@@ -54,6 +54,25 @@ interface JudgeProjectItem {
 export default function JudgeDashboard({ user }: JudgeDashboardProps) {
   const [activeTab, setActiveTab] = useState<"queue" | "isolation" | "history" | "rubric">("queue");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as any;
+      if (tabParam && ["queue", "isolation", "history", "rubric"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
+
+  const handleTabChange = (tab: string) => {
+    const validTab = tab as "queue" | "isolation" | "history" | "rubric";
+    setActiveTab(validTab);
+    if (typeof window !== "undefined") {
+      const newUrl = validTab === "queue" ? "/dashboard/judge" : `/dashboard/judge?tab=${validTab}`;
+      window.history.pushState(null, "", newUrl);
+    }
+  };
+
   const [selectedProject, setSelectedProject] = useState<EvaluationForm | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
@@ -318,7 +337,7 @@ export default function JudgeDashboard({ user }: JudgeDashboardProps) {
         role="judge"
         user={user}
         activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab as any)}
+        onTabChange={(tab) => handleTabChange(tab)}
         navItems={JUDGE_NAV}
       />
 

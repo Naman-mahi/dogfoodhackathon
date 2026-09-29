@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { AuthUser } from "../../lib/auth";
 import DashboardSidebar, { ORGANIZER_NAV } from "../../components/DashboardSidebar";
+import JudgeProgressView from "../../components/JudgeProgressView";
 import {
   fetchEvents,
   fetchJudges,
@@ -49,6 +50,7 @@ import {
 import { Hackathon } from "../../lib/types";
 import DataTable, { ColumnDef } from "../../components/DataTable";
 import Select2 from "../../components/Select2";
+import { formatDateSafe, parseSafeDate } from "../../lib/dateUtils";
 
 export type OrganizerTab =
   | "overview"
@@ -81,10 +83,27 @@ export default function OrganizerDashboard({
   const [activeTab, setActiveTab] = useState<OrganizerTab>(initialTab);
 
   useEffect(() => {
-    if (initialTab) {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as OrganizerTab;
+      if (tabParam && ["overview", "events", "judges", "hackathon_judges", "lifecycle", "rubric", "progress", "exports"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      } else if (initialTab) {
+        setActiveTab(initialTab);
+      }
+    } else if (initialTab) {
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  const handleTabChange = (tab: string) => {
+    const validTab = tab as OrganizerTab;
+    setActiveTab(validTab);
+    if (typeof window !== "undefined") {
+      const newUrl = validTab === "overview" ? "/dashboard/organizer" : `/dashboard/organizer?tab=${validTab}`;
+      window.history.pushState(null, "", newUrl);
+    }
+  };
 
   const [submissionsClosed, setSubmissionsClosed] = useState(true);
   const [rubricWeights, setRubricWeights] = useState({
@@ -306,8 +325,8 @@ export default function OrganizerDashboard({
       sortable: true,
       render: (ev) => {
         const regDeadline = ev.registration_deadline || ev.registrationDeadline || ev.submissions_close;
-        const isRegClosed = regDeadline ? new Date(regDeadline) <= new Date() : false;
-        const isUpcoming = ev.startDate ? new Date(ev.startDate) > new Date() : false;
+        const isRegClosed = regDeadline ? (parseSafeDate(regDeadline)?.getTime() || 0) <= Date.now() : false;
+        const isUpcoming = ev.startDate ? (parseSafeDate(ev.startDate)?.getTime() || 0) > Date.now() : false;
 
         return (
           <div className="space-y-1">
@@ -358,7 +377,7 @@ export default function OrganizerDashboard({
         const regDeadline = ev.registration_deadline || ev.registrationDeadline || ev.submissions_close;
         return (
           <span className="text-xs font-mono font-medium text-slate-700">
-            {regDeadline ? new Date(regDeadline).toLocaleDateString() : "Open"}
+            {formatDateSafe(regDeadline, "Open")}
           </span>
         );
       },
@@ -530,7 +549,7 @@ export default function OrganizerDashboard({
         role="organizer"
         user={user}
         activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab as any)}
+        onTabChange={(tab) => handleTabChange(tab)}
         navItems={ORGANIZER_NAV}
       />
 
@@ -909,15 +928,12 @@ export default function OrganizerDashboard({
                   <div className="text-right">
                     <div className="text-xs text-purple-300">Registration Deadline:</div>
                     <div className="text-sm font-bold text-white font-mono">
-                      {activeHackathon.registration_deadline ||
-                      activeHackathon.registrationDeadline ||
-                      activeHackathon.submissions_close
-                        ? new Date(
-                            activeHackathon.registration_deadline ||
-                              activeHackathon.registrationDeadline ||
-                              activeHackathon.submissions_close!
-                          ).toLocaleDateString()
-                        : "Open"}
+                      {formatDateSafe(
+                        activeHackathon.registration_deadline ||
+                          activeHackathon.registrationDeadline ||
+                          activeHackathon.submissions_close,
+                        "Open"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1185,44 +1201,7 @@ export default function OrganizerDashboard({
 
         {/* ── JUDGE PROGRESS TAB (100% DYNAMIC) ── */}
         {activeTab === "progress" && (
-          <div className="space-y-6">
-            <div className="border-b border-slate-200 pb-5">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Judge Evaluation Progress</h1>
-              <p className="text-xs text-slate-500">Monitor individual evaluator queues and track assignments with independent scoring.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {judges.map((j) => {
-                const assignedTracks = j.tracks || [];
-                const candidateProjects = projectsList.filter((p) =>
-                  assignedTracks.length === 0 || assignedTracks.includes(p.trackLabel || p.track)
-                );
-
-                return (
-                  <div key={j.id} className="card-modern p-5 space-y-3 bg-white">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">{j.name}</span>
-                      <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono font-bold">
-                        {j.id}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 line-clamp-1">
-                      Tracks: {assignedTracks.length > 0 ? assignedTracks.join(", ") : "All Tracks"}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-slate-500">Track Queue</span>
-                        <span className="font-bold text-purple-600">{candidateProjects.length} candidate projects</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-600 rounded-full w-full" />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <JudgeProgressView onAutoAssignSuccess={() => loadJudges()} />
         )}
 
         {/* ── EXPORTS TAB ── */}

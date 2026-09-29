@@ -94,8 +94,8 @@ export default function ChangePasswordPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
@@ -119,8 +119,8 @@ export default function ChangePasswordPage() {
   const strength = getStrength(newPassword);
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 flex flex-col justify-center items-center">
+      <div className="max-w-xl w-full space-y-6">
         {/* Back Link */}
         <Link
           href={
@@ -128,48 +128,50 @@ export default function ChangePasswordPage() {
               ? "/dashboard/organizer"
               : currentUser?.role === "judge"
               ? "/dashboard/judge"
+              : currentUser?.role === "admin"
+              ? "/admin"
               : "/dashboard"
           }
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Dashboard</span>
         </Link>
 
         {/* Card */}
-        <div className="bg-[#0b101d] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-800 pb-5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-950/60 border border-blue-500/40 text-blue-400 flex items-center justify-center shrink-0">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm space-y-6">
+          <div className="flex items-center gap-3.5 border-b border-slate-100 pb-5">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Change Password
               </h1>
-              <p className="text-xs text-slate-400">
-                Update your account password for{" "}
-                <span className="text-blue-400 font-semibold">{currentUser?.email}</span>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Update account credentials for{" "}
+                <span className="text-blue-600 font-semibold">{currentUser?.email}</span>
               </p>
             </div>
           </div>
 
           {/* Messages */}
           {successMsg && (
-            <div className="p-4 bg-emerald-950/50 border border-emerald-500/40 rounded-2xl flex items-start gap-3 text-emerald-300 text-xs">
-              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-800 text-xs shadow-xs">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" />
               <div>
-                <p className="font-bold text-emerald-200">Password Updated Successfully</p>
-                <p className="mt-0.5">{successMsg}</p>
+                <p className="font-bold text-emerald-900">Password Updated Successfully</p>
+                <p className="mt-0.5 text-emerald-700 leading-relaxed">{successMsg}</p>
               </div>
             </div>
           )}
 
           {errorMsg && (
-            <div className="p-4 bg-rose-950/50 border border-rose-500/40 rounded-2xl flex items-start gap-3 text-rose-300 text-xs">
-              <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-800 text-xs shadow-xs">
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
               <div>
-                <p className="font-bold text-rose-200">Error</p>
-                <p className="mt-0.5">{errorMsg}</p>
+                <p className="font-bold text-rose-900">Error</p>
+                <p className="mt-0.5 text-rose-700 leading-relaxed">{errorMsg}</p>
               </div>
             </div>
           )}
@@ -177,10 +179,10 @@ export default function ChangePasswordPage() {
           {/* Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Current Password */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                Current Password <span className="text-rose-400">*</span>
+                Current Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -189,12 +191,12 @@ export default function ChangePasswordPage() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
-                  className="w-full bg-[#121828] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -202,15 +204,15 @@ export default function ChangePasswordPage() {
             </div>
 
             {/* New Password */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                  New Password <span className="text-rose-400">*</span>
+                  New Password <span className="text-rose-500">*</span>
                 </label>
                 {newPassword && (
-                  <span className="text-[10px] font-mono text-slate-400">
-                    Strength: <span className="font-bold text-slate-200">{strength.label}</span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    Strength: <span className="font-bold text-slate-800">{strength.label}</span>
                   </span>
                 )}
               </div>
@@ -222,12 +224,12 @@ export default function ChangePasswordPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full bg-[#121828] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -240,22 +242,22 @@ export default function ChangePasswordPage() {
                     <div
                       key={step}
                       className={`flex-1 rounded-full ${
-                        step <= strength.score ? strength.color : "bg-slate-800"
+                        step <= strength.score ? strength.color : "bg-slate-200"
                       }`}
                     />
                   ))}
                 </div>
               )}
-              <span className="text-[10px] text-slate-500 mt-1 block">
-                Must be at least 6 characters long.
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Must be at least 6 characters long with mixed characters.
               </span>
             </div>
 
             {/* Confirm Password */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                Confirm New Password <span className="text-rose-400">*</span>
+                Confirm New Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -264,35 +266,35 @@ export default function ChangePasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-type new password"
-                  className="w-full bg-[#121828] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
-                <span className="text-[10px] text-rose-400 mt-1 block">
+                <span className="text-[11px] text-rose-500 font-semibold mt-1 block">
                   Passwords do not match.
                 </span>
               )}
             </div>
 
             {/* Actions */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div className="pt-5 border-t border-slate-100 flex items-center justify-between">
               <Link
                 href="/settings"
-                className="text-xs text-slate-400 hover:text-slate-200"
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Go to Profile Settings
               </Link>
               <button
                 type="submit"
                 disabled={submitting || !currentPassword || !newPassword || newPassword !== confirmPassword}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {submitting ? (
                   <>

@@ -39,6 +39,7 @@ import {
 import toast from "react-hot-toast";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import Select2 from "@/components/Select2";
+import { formatDateSafe, formatDateTimeSafe, parseSafeDate } from "@/lib/dateUtils";
 
 function EventsContent() {
   const router = useRouter();
@@ -163,21 +164,15 @@ function EventsContent() {
   };
 
   // Timeline and Registration deadline checks safely guarded against null hackathon
-  const formattedStartDate = hackathon?.startDate
-    ? new Date(hackathon.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : "TBD";
-  const formattedEndDate = hackathon?.endDate
-    ? new Date(hackathon.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : "TBD";
+  const formattedStartDate = formatDateSafe(hackathon?.startDate, "TBD");
+  const formattedEndDate = formatDateSafe(hackathon?.endDate, "TBD");
 
   const deadlineDate = hackathon?.submissions_close || hackathon?.endDate;
-  const isClosed = deadlineDate ? new Date(deadlineDate) <= new Date() : false;
+  const isClosed = deadlineDate ? (parseSafeDate(deadlineDate)?.getTime() || 0) <= Date.now() : false;
 
   const regDeadlineDate = hackathon?.registration_deadline || hackathon?.submissions_close || hackathon?.endDate;
-  const isRegClosed = regDeadlineDate ? new Date(regDeadlineDate) <= new Date() : false;
-  const formattedRegDeadline = regDeadlineDate
-    ? new Date(regDeadlineDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : formattedEndDate;
+  const isRegClosed = regDeadlineDate ? (parseSafeDate(regDeadlineDate)?.getTime() || 0) <= Date.now() : false;
+  const formattedRegDeadline = formatDateSafe(regDeadlineDate, formattedEndDate);
 
   // Project Submission Form State
   const [submissionForm, setSubmissionForm] = useState({
@@ -669,7 +664,7 @@ function EventsContent() {
               <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-4">
                 <div className="flex items-center gap-2 font-bold text-base text-amber-900">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                  Submissions Window Closed ({new Date(deadlineDate).toISOString()})
+                  Submissions Window Closed ({formatDateTimeSafe(deadlineDate, "TBD")})
                 </div>
                 <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
                   In strict compliance with DOGFOOD 2026 Tier 1 specifications, the submissions deadline has elapsed. The portal strictly locks new submissions and modifications (HTTP 4xx refused) while double-blind peer evaluations take place.
@@ -689,7 +684,7 @@ function EventsContent() {
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Submissions are currently <strong>OPEN</strong>. Submissions close on {new Date(deadlineDate).toLocaleString()}.</span>
+                    <span>Submissions are currently <strong>OPEN</strong>. Submissions close on {formatDateTimeSafe(deadlineDate, "TBD")}.</span>
                   </div>
                 </div>
 

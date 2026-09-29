@@ -15,6 +15,7 @@ import ProjectSubmissionModal from "./ProjectSubmissionModal";
 import LikeButton from "./LikeButton";
 import ProjectComments from "./ProjectComments";
 import ProjectFilterBar from "./ProjectFilterBar";
+import { formatDateSafe } from "@/lib/dateUtils";
 
 export default async function ProjectsPage({
   searchParams,
@@ -92,12 +93,7 @@ export default async function ProjectsPage({
               <div>Project ID: {activeProject.id}</div>
               <div>&bull;</div>
               <div>
-                Submitted:{" "}
-                {new Date(activeProject.submittedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                Submitted: {formatDateSafe(activeProject.submittedAt, "Recently")}
               </div>
             </div>
           </div>

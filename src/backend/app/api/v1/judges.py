@@ -13,6 +13,11 @@ def list_judges():
     """List all invited judges and their assigned evaluation tracks."""
     return JudgingService.list_judges()
 
+@router.get("/progress")
+def get_judges_progress(user: UserSession = Depends(require_organizer)):
+    """Retrieve full evaluation progress breakdown for all judges."""
+    return JudgingService.get_evaluation_progress(authenticated_user_id=user.user_id, is_organizer=True)
+
 @router.get("/{judge_id}", response_model=JudgeOut)
 def get_judge(judge_id: str):
     """Retrieve details for a single judge."""

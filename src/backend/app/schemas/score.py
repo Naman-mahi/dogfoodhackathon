@@ -2,10 +2,10 @@ from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 
 class ScoreBase(BaseModel):
-    judge: str
     project: str
     criteria: Dict[str, Any]
     comment: Optional[str] = None
+    judge: Optional[str] = None
 
 class ScoreCreate(ScoreBase):
     pass

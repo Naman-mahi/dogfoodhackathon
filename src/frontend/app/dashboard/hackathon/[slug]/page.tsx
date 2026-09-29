@@ -38,6 +38,7 @@ import {
 } from "@/lib/api";
 import toast from "react-hot-toast";
 import Select2 from "@/components/Select2";
+import { formatDateSafe, formatDateTimeSafe } from "@/lib/dateUtils";
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 type TabId = "overview" | "tracks" | "teams" | "submissions";
@@ -352,7 +353,7 @@ function HackathonDetailContent() {
             <div className="text-xs text-slate-400">Total Prize Pool · {event.participantCount?.toLocaleString() || 0} Registered</div>
             {event.submissions_close && (
               <div className="text-xs font-mono text-slate-400">
-                Deadline: {new Date(event.submissions_close).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                Deadline: {formatDateSafe(event.submissions_close, "TBD")}
               </div>
             )}
             <div className="pt-2">
@@ -454,7 +455,7 @@ function HackathonDetailContent() {
                     <div className="flex-1">
                       <span className="font-bold text-slate-900">{milestone.title}</span>
                       <span className="text-slate-400 ml-2 font-mono">
-                        {new Date(milestone.timestamp).toLocaleDateString()}
+                        {formatDateSafe(milestone.timestamp, "Ongoing")}
                       </span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -606,7 +607,7 @@ function HackathonDetailContent() {
               <div>
                 <div className="font-bold">Submissions Closed</div>
                 <div className="text-rose-700 text-[11px] mt-0.5">
-                  The submission deadline ({event.submissions_close ? new Date(event.submissions_close).toLocaleString() : "TBD"}) has passed. No new submissions or edits are accepted.
+                  The submission deadline ({formatDateTimeSafe(event.submissions_close, "TBD")}) has passed. No new submissions or edits are accepted.
                 </div>
               </div>
             </div>
@@ -615,7 +616,7 @@ function HackathonDetailContent() {
               <Sparkles className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold">Submissions Open Soon</div>
-                <div className="text-blue-700 text-[11px] mt-0.5">This hackathon has not started yet. Submissions will open on {event.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD"}.</div>
+                <div className="text-blue-700 text-[11px] mt-0.5">This hackathon has not started yet. Submissions will open on {formatDateSafe(event.startDate, "TBD")}.</div>
               </div>
             </div>
           ) : (
@@ -623,7 +624,7 @@ function HackathonDetailContent() {
               <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold">Submissions Open</div>
-                <div className="text-emerald-700 text-[11px] mt-0.5">Deadline: {event.submissions_close ? new Date(event.submissions_close).toLocaleString() : "TBD"}</div>
+                <div className="text-emerald-700 text-[11px] mt-0.5">Deadline: {formatDateTimeSafe(event.submissions_close, "TBD")}</div>
               </div>
             </div>
           )}
@@ -698,7 +699,7 @@ function HackathonDetailContent() {
                   </a>
                 )}
                 <span className="text-slate-400 font-mono text-[11px] ml-auto">
-                  Submitted: {new Date(existingSubmission.submittedAt).toLocaleString()}
+                  Submitted: {formatDateTimeSafe(existingSubmission.submittedAt, "Recently")}
                 </span>
               </div>
             </div>

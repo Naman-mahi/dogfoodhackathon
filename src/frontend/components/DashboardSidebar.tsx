@@ -144,11 +144,18 @@ export default function DashboardSidebar({
           </p>
           <nav className="space-y-1 text-xs font-semibold">
             {navItems.map((item) => {
-              const isActive = activeTab
-                ? activeTab === item.id
-                : item.href
-                ? pathname === item.href
-                : false;
+              let isActive = false;
+              if (activeTab) {
+                isActive = activeTab === item.id;
+              } else if (item.href) {
+                if (item.href.includes("?tab=")) {
+                  const targetTab = item.href.split("?tab=")[1];
+                  const currentSearch = typeof window !== "undefined" ? window.location.search : "";
+                  isActive = pathname.startsWith(item.href.split("?")[0]) && currentSearch.includes(`tab=${targetTab}`);
+                } else {
+                  isActive = pathname === item.href;
+                }
+              }
 
               const activeCls = isOrganizer
                 ? "bg-purple-50 text-purple-700 font-bold border border-purple-200/80 shadow-2xs"
@@ -216,24 +223,24 @@ export default function DashboardSidebar({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pre-configured nav items for each role
+// Pre-configured nav items for each role - All backed by concrete URLs
 // ─────────────────────────────────────────────────────────────────────────────
 export const ORGANIZER_NAV: SidebarNavItem[] = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" />, href: "/dashboard/organizer" },
   { id: "events", label: "Manage Events", icon: <Calendar className="w-4 h-4" />, href: "/manage-events" },
   { id: "judges", label: "Manage Judges", icon: <Award className="w-4 h-4" />, href: "/manage-judges" },
   { id: "hackathon_judges", label: "Hackathon Judges", icon: <Users className="w-4 h-4" />, href: "/hackathon-judges" },
-  { id: "lifecycle", label: "Event Lifecycle", icon: <Settings className="w-4 h-4" /> },
-  { id: "rubric", label: "Rubric & Weights", icon: <Sliders className="w-4 h-4" /> },
-  { id: "progress", label: "Judge Progress", icon: <Sparkles className="w-4 h-4" /> },
-  { id: "exports", label: "Export & Reports", icon: <FileSpreadsheet className="w-4 h-4" /> },
+  { id: "lifecycle", label: "Event Lifecycle", icon: <Settings className="w-4 h-4" />, href: "/dashboard/organizer?tab=lifecycle" },
+  { id: "rubric", label: "Rubric & Weights", icon: <Sliders className="w-4 h-4" />, href: "/dashboard/organizer?tab=rubric" },
+  { id: "progress", label: "Judge Progress", icon: <Sparkles className="w-4 h-4" />, href: "/manage-evaluations" },
+  { id: "exports", label: "Export & Reports", icon: <FileSpreadsheet className="w-4 h-4" />, href: "/dashboard/organizer?tab=exports" },
 ];
 
 export const JUDGE_NAV: SidebarNavItem[] = [
   { id: "queue", label: "Assigned Queue", icon: <LayoutList className="w-4 h-4" />, href: "/dashboard/judge" },
-  { id: "isolation", label: "Peer Isolation", icon: <Lock className="w-4 h-4" /> },
-  { id: "history", label: "My Evaluations", icon: <History className="w-4 h-4" /> },
-  { id: "rubric", label: "Rubric Guide", icon: <BookOpen className="w-4 h-4" /> },
+  { id: "isolation", label: "Peer Isolation", icon: <Lock className="w-4 h-4" />, href: "/dashboard/judge?tab=isolation" },
+  { id: "history", label: "My Evaluations", icon: <History className="w-4 h-4" />, href: "/dashboard/judge?tab=history" },
+  { id: "rubric", label: "Rubric Guide", icon: <BookOpen className="w-4 h-4" />, href: "/dashboard/judge?tab=rubric" },
 ];
 
 export const ORGANIZER_EXTRA: SidebarNavItem[] = [];

@@ -26,6 +26,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { getStoredUser, fetchCurrentUser, AuthUser } from "@/lib/auth";
+import { formatDateSafe, formatDateTimeSafe } from "@/lib/dateUtils";
 import {
   fetchEvent,
   fetchEventRegistrations,
@@ -413,7 +414,7 @@ function ManageHackathonContent() {
       sortable: true,
       render: (r) => (
         <span className="text-xs font-mono text-slate-600">
-          {r.created_at ? new Date(r.created_at).toLocaleDateString() : "Active"}
+          {formatDateSafe(r.created_at, "Active")}
         </span>
       ),
     },
@@ -682,13 +683,13 @@ function ManageHackathonContent() {
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">Start Date</span>
                     <span className="text-slate-800 font-mono font-bold mt-1 block">
-                      {new Date(event.startDate).toLocaleDateString()}
+                      {formatDateSafe(event.startDate, "TBD")}
                     </span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">End Date</span>
                     <span className="text-slate-800 font-mono font-bold mt-1 block">
-                      {new Date(event.endDate).toLocaleDateString()}
+                      {formatDateSafe(event.endDate, "TBD")}
                     </span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80">

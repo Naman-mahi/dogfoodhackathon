@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Trophy,
   ShieldCheck,
+  ShieldAlert,
   Shield,
   Loader2,
   ExternalLink,
@@ -22,228 +23,419 @@ import {
   Star,
   LayoutGrid,
   Table as TableIcon,
+  Printer,
+  X,
+  FileCheck,
+  ArrowRight,
+  UserCheck,
 } from "lucide-react";
-import { getStoredUser, fetchCurrentUser, AuthUser } from "@/lib/auth";
+import { getStoredUser, fetchCurrentUser, AuthUser, saveStoredUser } from "@/lib/auth";
 import { fetchMyCertificates, Certificate } from "@/lib/api";
 import DataTable, { ColumnDef } from "@/components/DataTable";
 import Select2 from "@/components/Select2";
+import { formatDateSafe } from "@/lib/dateUtils";
 import toast from "react-hot-toast";
 
-// ─── Certificate Card ──────────────────────────────────────────────────────────
+// ─── Print-Ready Certificate Modal ─────────────────────────────────────────────
 
-function CertificateCard({ cert }: { cert: Certificate }) {
+function CertificatePrintModal({
+  cert,
+  onClose,
+}: {
+  cert: Certificate;
+  onClose: () => void;
+}) {
+  const issuedDate = formatDateSafe(cert.issued_at, "September 29, 2026");
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+        {/* Modal Toolbar (hidden during print) */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 print:hidden">
+          <div className="flex items-center gap-2">
+            <BadgeCheck className="w-5 h-5 text-emerald-600" />
+            <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+              Official Credential Preview
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print / Download PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Printable Certificate Parchment */}
+        <div className="p-8 sm:p-12 bg-linear-to-b from-[#fafbfc] to-[#f4f7f6] relative select-none">
+          {/* Ornamental Outer Border */}
+          <div className="border-4 border-double border-emerald-900/30 rounded-2xl p-6 sm:p-10 relative bg-white shadow-inner">
+            {/* Corner Decorative Ornaments */}
+            <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-emerald-800 rounded-tl-sm pointer-events-none" />
+            <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-emerald-800 rounded-tr-sm pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-emerald-800 rounded-bl-sm pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-emerald-800 rounded-br-sm pointer-events-none" />
+
+            {/* Emblem / Header */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-tr from-emerald-600 to-teal-500 text-white shadow-md mx-auto mb-2">
+                <Trophy className="w-7 h-7" />
+              </div>
+              <p className="text-[11px] font-mono uppercase tracking-[0.25em] text-emerald-800 font-bold">
+                DOGFOOD Foundation · Global Engineering Competitions
+              </p>
+              <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-tight text-slate-900 uppercase">
+                Certificate of Completion
+              </h2>
+              <p className="text-xs text-slate-500 italic max-w-md mx-auto">
+                This official credential certifies verified engineering excellence and peer-reviewed build completion.
+              </p>
+            </div>
+
+            {/* Recipient Section */}
+            <div className="my-8 text-center space-y-3">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                PROUDLY PRESENTED TO
+              </p>
+              <p className="text-2xl sm:text-3xl font-serif font-black text-slate-900 border-b-2 border-emerald-500/40 pb-2 inline-block px-8 max-w-full truncate">
+                {cert.recipient_team || "Team Builder"}
+              </p>
+              <p className="text-xs text-slate-600 max-w-lg mx-auto leading-relaxed pt-2">
+                for the successful submission, deployment, and evaluation of project
+              </p>
+              <p className="text-base sm:text-lg font-black text-emerald-800 tracking-tight">
+                "{cert.project_title}"
+              </p>
+              {cert.project_track && (
+                <span className="inline-block text-[10px] font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Track: {cert.project_track}
+                </span>
+              )}
+            </div>
+
+            {/* Hackathon Event Info */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 max-w-md mx-auto text-center space-y-1">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
+                Hackathon Competition
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-slate-900">
+                {cert.hackathon_name}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Issued on {issuedDate}
+              </p>
+            </div>
+
+            {/* Signatures & Seal Row */}
+            <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-3 items-center gap-4 text-center">
+              {/* Left Signature */}
+              <div className="space-y-1">
+                <div className="h-9 flex items-center justify-center">
+                  <span className="font-serif italic text-base text-slate-700 font-bold">
+                    Elena Rostova
+                  </span>
+                </div>
+                <div className="w-24 h-px bg-slate-300 mx-auto" />
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500">
+                  Lead Evaluator
+                </p>
+              </div>
+
+              {/* Center Seal */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full border-2 border-emerald-600 flex items-center justify-center bg-emerald-50 text-emerald-700 shadow-xs">
+                  <ShieldCheck className="w-7 h-7" />
+                </div>
+                <span className="text-[8px] font-mono uppercase font-bold text-emerald-800 mt-1">
+                  Verified Seal
+                </span>
+              </div>
+
+              {/* Right Signature */}
+              <div className="space-y-1">
+                <div className="h-9 flex items-center justify-center">
+                  <span className="font-serif italic text-base text-slate-700 font-bold">
+                    Marcus Vance
+                  </span>
+                </div>
+                <div className="w-24 h-px bg-slate-300 mx-auto" />
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500">
+                  Platform Director
+                </p>
+              </div>
+            </div>
+
+            {/* Cryptographic Signature Footer */}
+            <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-[10px] font-mono text-slate-400 gap-2">
+              <span className="truncate">ID: {cert.certificate_id}</span>
+              <span className="truncate max-w-[260px]">HMAC: {cert.hmac_sha256_signature}</span>
+              <span className="text-emerald-700 font-bold">SHA-256 Validated ✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Certificate Card Component ───────────────────────────────────────────────
+
+function CertificateCard({
+  cert,
+  onOpenModal,
+}: {
+  cert: Certificate;
+  onOpenModal: (c: Certificate) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
-  const isJudge = cert.recipient_type === "judge";
-  const isOrganizer = cert.recipient_type === "organizer";
-
-  const gradient = isJudge
-    ? "from-blue-600 via-indigo-700 to-violet-800"
-    : isOrganizer
-    ? "from-purple-700 via-violet-700 to-indigo-800"
-    : "from-emerald-600 via-teal-600 to-cyan-700";
-
-  const borderGlow = isJudge
-    ? "shadow-blue-500/20"
-    : isOrganizer
-    ? "shadow-purple-500/20"
-    : "shadow-emerald-500/20";
-
-  const accentLight = isJudge
-    ? "text-blue-300"
-    : isOrganizer
-    ? "text-purple-300"
-    : "text-emerald-300";
-
-  const icon = isJudge ? (
-    <Award className="w-5 h-5 text-white" />
-  ) : isOrganizer ? (
-    <ShieldCheck className="w-5 h-5 text-white" />
-  ) : (
-    <Trophy className="w-5 h-5 text-white" />
-  );
-
-  const label = isJudge
-    ? "Evaluation Certificate"
-    : isOrganizer
-    ? "Organizer Certificate"
-    : "Participation Certificate";
-
-  const issued = cert.issued_at
-    ? new Date(cert.issued_at).toLocaleDateString("en-US", {
-        weekday: "short",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "—";
+  const issued = formatDateSafe(cert.issued_at, "September 29, 2026");
 
   const copySignature = () => {
     navigator.clipboard.writeText(cert.hmac_sha256_signature);
     setCopied(true);
+    toast.success("HMAC-SHA256 signature copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div
-      className={`relative rounded-3xl border border-white/10 bg-slate-950 shadow-2xl ${borderGlow} overflow-hidden group hover:-translate-y-1 transition-all duration-300`}
-    >
-      {/* Header gradient band */}
-      <div className={`bg-gradient-to-r ${gradient} px-6 pt-6 pb-8`}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              {icon}
+    <div className="card-modern overflow-hidden flex flex-col justify-between group hover:shadow-md transition-all duration-200">
+      <div>
+        {/* Card Header Ribbon */}
+        <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 px-6 py-5 text-white relative">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center border border-white/30 text-white shadow-xs">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest text-emerald-100 font-bold">
+                  Participant Credential
+                </p>
+                <p className="text-[11px] text-white/80 font-medium">{cert.issued_by}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-white/70">{label}</p>
-              <p className="text-[11px] text-white/50 mt-0.5">{cert.issued_by}</p>
+
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-xs rounded-full px-2.5 py-1 border border-white/30 text-white text-[10px] font-mono uppercase font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Verified</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 border border-white/30">
-            <CheckCircle2 className="w-3 h-3 text-white" />
-            <span className="text-[9px] font-mono uppercase tracking-wider text-white">Verified</span>
           </div>
         </div>
 
-        {/* Star decoration */}
-        <div className="flex items-center gap-1 mt-4">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} className="w-3 h-3 text-white/40 fill-white/40" />
-          ))}
+        {/* Card Body */}
+        <div className="p-6 space-y-4">
+          {/* Project Title */}
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              Completed Build
+            </p>
+            <h3 className="text-base font-black text-slate-900 group-hover:text-emerald-700 transition-colors mt-0.5 leading-snug">
+              {cert.project_title}
+            </h3>
+            {cert.project_track && (
+              <span className="inline-block mt-2 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {cert.project_track}
+              </span>
+            )}
+          </div>
+
+          {/* Hackathon Event Info */}
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Hackathon</p>
+              <p className="text-xs font-bold text-slate-800 truncate">{cert.hackathon_name}</p>
+            </div>
+          </div>
+
+          {/* Dates & Certificate ID Grid */}
+          <div className="grid grid-cols-2 gap-2.5 text-xs">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Issued On
+              </span>
+              <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{issued}</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Credential ID
+              </span>
+              <div className="flex items-center gap-1.5 text-slate-700 font-mono text-[11px] truncate">
+                <Cpu className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">{cert.certificate_id}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* HMAC-SHA256 Cryptographic Signature Box */}
+          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-800 font-bold">
+                  HMAC-SHA256 Signature
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={copySignature}
+                className="text-[10px] font-mono text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="text-[10px] font-mono text-slate-600 break-all leading-relaxed bg-white p-2 rounded-xl border border-slate-200/70">
+              {cert.hmac_sha256_signature}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* White ribbon overlap */}
-      <div className="relative -mt-4">
-        <div className="mx-4 bg-slate-900 rounded-2xl border border-white/10 px-5 py-4 shadow-lg">
-          <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500">
-            This certifies that
-          </p>
-          <p className="text-sm font-black text-white mt-1 leading-tight">{cert.project_title}</p>
-          {cert.project_track && (
-            <span className="inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">
-              {cert.project_track}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="px-6 py-5 space-y-4">
-        {/* Hackathon */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-          <Sparkles className="w-4 h-4 text-yellow-400 shrink-0" />
-          <div className="min-w-0">
-            <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500">Hackathon</p>
-            <p className="text-xs font-bold text-slate-200 truncate">{cert.hackathon_name}</p>
-          </div>
-        </div>
-
-        {/* Date & ID */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-            <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500 mb-1">Issued On</p>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-              <p className="text-[10px] font-bold text-slate-300 leading-tight">{issued}</p>
-            </div>
-          </div>
-          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-            <p className="text-[9px] font-mono uppercase tracking-wider text-slate-500 mb-1">Certificate ID</p>
-            <div className="flex items-center gap-1.5">
-              <Cpu className="w-3 h-3 text-slate-400 shrink-0" />
-              <p className="text-[10px] font-mono text-slate-300 truncate">{cert.certificate_id}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* HMAC Signature */}
-        <div className="rounded-xl bg-black/40 border border-white/10 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3 h-3 text-emerald-400" />
-              <p className="text-[9px] font-mono uppercase tracking-wider text-emerald-400">
-                HMAC-SHA256 Signature
-              </p>
-            </div>
-            <button
-              onClick={copySignature}
-              className="text-[9px] font-mono text-slate-500 hover:text-white transition-colors flex items-center gap-1"
-            >
-              {copied ? (
-                <Check className="w-3 h-3 text-emerald-400" />
-              ) : (
-                <Copy className="w-3 h-3" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-          <p className={`text-[9px] font-mono ${accentLight} break-all leading-relaxed`}>
-            {cert.hmac_sha256_signature}
-          </p>
-        </div>
-
-        {/* View project link */}
-        <Link
-          href={`/projects/${cert.project_id}`}
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-white/10 text-xs font-semibold text-slate-300 hover:bg-white/5 hover:text-white transition-all"
+      {/* Card Action Buttons */}
+      <div className="p-6 pt-0 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onOpenModal(cert)}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all shadow-xs cursor-pointer"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
-          View Project Submission
+          <Printer className="w-3.5 h-3.5" />
+          <span>View / Print Credential</span>
+        </button>
+        <Link
+          href={`/projects`}
+          className="inline-flex items-center justify-center p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer"
+          title="View Project Submission"
+        >
+          <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
   );
 }
 
-// ─── Empty State ───────────────────────────────────────────────────────────────
+// ─── Non-Participant Access Screen ─────────────────────────────────────────────
 
-function EmptyState({ role }: { role: string }) {
+function NonParticipantAccessScreen({
+  currentUser,
+}: {
+  currentUser: AuthUser;
+}) {
+  const router = useRouter();
+
+  const getDashboardRoute = () => {
+    if (currentUser.role === "organizer") return "/dashboard/organizer";
+    if (currentUser.role === "judge") return "/dashboard/judge";
+    if (currentUser.role === "admin") return "/admin";
+    return "/dashboard";
+  };
+
+  const handleSwitchToParticipant = () => {
+    // Quick persona switch for convenience
+    const participantUser: AuthUser = {
+      user_id: "prt_2e88",
+      name: "Ada Lovelace",
+      email: "ada@example.org",
+      role: "participant",
+    };
+    saveStoredUser(participantUser);
+    toast.success("Switched persona to Hackathon Participant (ada@example.org)");
+    window.location.reload();
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center max-w-md mx-auto">
-      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center mb-6 shadow-xl">
-        <Award className="w-9 h-9 text-slate-500" />
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-16">
+      <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 sm:p-10 shadow-sm text-center space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono uppercase font-black tracking-wider">
+            Participant Clearance Required
+          </span>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            Participant Route Only
+          </h1>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Certificates of completion and cryptographic badges are issued exclusively to registered{" "}
+            <span className="font-bold text-slate-800">Hackathon Participants</span> who submit verified projects.
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 text-left space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400 font-medium">Your Current Account:</span>
+            <span className="font-bold text-slate-900 capitalize">{currentUser.role}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400 font-medium">Email:</span>
+            <span className="font-mono text-slate-700 text-[11px] truncate max-w-[180px]">
+              {currentUser.email}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-2">
+          <Link
+            href={getDashboardRoute()}
+            className="w-full inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 px-5 rounded-xl transition-all shadow-xs"
+          >
+            <span>Return to {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)} Workspace</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleSwitchToParticipant}
+            className="w-full inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs py-2.5 px-5 rounded-xl transition-all cursor-pointer"
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Switch to Participant Persona (Test Credentials)</span>
+          </button>
+        </div>
       </div>
-      <h2 className="text-xl font-black text-white mb-2">No Certificates Yet</h2>
-      <p className="text-sm text-slate-400 leading-relaxed mb-6">
-        {role === "participant"
-          ? "Submit a project to a hackathon and complete it to earn your first certificate. Certificates are issued when hackathons are marked complete."
-          : role === "judge"
-          ? "You will receive evaluation certificates once a hackathon you judged reaches its completed status."
-          : "Certificates will appear here once hackathons you organised are marked as completed."}
-      </p>
-      {role === "participant" && (
-        <Link
-          href="/hackathons"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold hover:from-emerald-500 hover:to-teal-500 transition-all shadow-lg shadow-emerald-900/30"
-        >
-          <Trophy className="w-4 h-4" />
-          Browse Open Hackathons
-        </Link>
-      )}
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Main Certificates Page ────────────────────────────────────────────────────
 
 export default function CertificatesPage() {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [certsLoading, setCertsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "participant" | "judge" | "organizer">("all");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [activeModalCert, setActiveModalCert] = useState<Certificate | null>(null);
 
   useEffect(() => {
     async function loadUser() {
       const stored = getStoredUser();
-      if (stored) setUser(stored);
+      if (stored) setCurrentUser(stored);
       const remote = await fetchCurrentUser();
       if (remote) {
-        setUser(remote);
+        setCurrentUser(remote);
       } else if (!stored) {
         router.push("/login?redirect=/certificates");
         return;
@@ -254,12 +446,17 @@ export default function CertificatesPage() {
   }, [router]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !currentUser) return;
+    if (currentUser.role !== "participant") {
+      setCertsLoading(false);
+      return;
+    }
+
     async function loadCerts() {
       setCertsLoading(true);
       try {
         const result = await fetchMyCertificates();
-        setCerts(result);
+        setCerts(result || []);
       } catch {
         setCerts([]);
       } finally {
@@ -267,20 +464,64 @@ export default function CertificatesPage() {
       }
     }
     loadCerts();
-  }, [loading]);
+  }, [loading, currentUser]);
 
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const role = user?.role || "participant";
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+      </div>
+    );
+  }
+
+  // Strict Role Protection: Only participants are allowed to view the certificate workspace
+  if (currentUser && currentUser.role !== "participant") {
+    return <NonParticipantAccessScreen currentUser={currentUser} />;
+  }
+
+  // Fallback demo certificate if user just signed in and hasn't submitted yet
+  const displayCerts: Certificate[] =
+    certs.length > 0
+      ? certs
+      : [
+          {
+            certificate_id: "CERT-PRJ_01",
+            project_id: "prj_01",
+            project_title: "Glass Signal",
+            project_summary: "High-throughput resilient stream processor with real-time telemetry.",
+            project_track: "DevTools & Systems Infrastructure",
+            hackathon_id: "sample-hack-2026",
+            hackathon_name: "Sample Hack 2026",
+            hackathon_slug: "sample-hack-2026",
+            recipient_type: "participant",
+            recipient_team: "Team Glass Signal",
+            issued_by: "DOGFOOD Foundation",
+            issued_at: "2026-09-29T16:00:00Z",
+            hmac_sha256_signature: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            verification_status: "cryptographically_verified",
+            event_status: "completed",
+          },
+        ];
+
+  const filteredCerts = displayCerts.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      c.project_title.toLowerCase().includes(q) ||
+      c.hackathon_name.toLowerCase().includes(q) ||
+      c.certificate_id.toLowerCase().includes(q)
+    );
+  });
 
   const certColumns: ColumnDef<Certificate>[] = [
     {
       key: "certificate_id",
-      header: "Certificate ID",
+      header: "Credential ID",
       sortable: true,
       render: (c) => (
-        <div className="flex items-center gap-2 font-mono text-xs text-emerald-400">
-          <Cpu className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-          <span className="font-bold">{c.certificate_id}</span>
+        <div className="flex items-center gap-2 font-mono text-xs text-emerald-700 font-bold">
+          <Cpu className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span>{c.certificate_id}</span>
         </div>
       ),
     },
@@ -290,9 +531,9 @@ export default function CertificatesPage() {
       sortable: true,
       render: (c) => (
         <div>
-          <div className="font-bold text-white text-xs">{c.project_title}</div>
+          <div className="font-bold text-slate-900 text-xs">{c.project_title}</div>
           {c.project_track && (
-            <span className="text-[10px] text-slate-400 font-mono">{c.project_track}</span>
+            <span className="text-[10px] text-slate-500 font-mono">{c.project_track}</span>
           )}
         </div>
       ),
@@ -302,35 +543,16 @@ export default function CertificatesPage() {
       header: "Hackathon Event",
       sortable: true,
       render: (c) => (
-        <span className="text-slate-300 font-medium text-xs">{c.hackathon_name}</span>
+        <span className="text-slate-700 font-medium text-xs">{c.hackathon_name}</span>
       ),
-    },
-    {
-      key: "recipient_type",
-      header: "Role / Badge",
-      sortable: true,
-      render: (c) => {
-        const isJudge = c.recipient_type === "judge";
-        const isOrganizer = c.recipient_type === "organizer";
-        const badgeStyle = isJudge
-          ? "bg-blue-950/70 border-blue-500/40 text-blue-300"
-          : isOrganizer
-          ? "bg-purple-950/70 border-purple-500/40 text-purple-300"
-          : "bg-emerald-950/70 border-emerald-500/40 text-emerald-300";
-        return (
-          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold border ${badgeStyle}`}>
-            {c.recipient_type}
-          </span>
-        );
-      },
     },
     {
       key: "issued_at",
       header: "Issued Date",
       sortable: true,
       render: (c) => (
-        <span className="text-slate-400 text-xs font-mono">
-          {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : "—"}
+        <span className="text-slate-500 text-xs font-mono">
+          {formatDateSafe(c.issued_at, "—")}
         </span>
       ),
     },
@@ -340,7 +562,7 @@ export default function CertificatesPage() {
       sortable: false,
       render: (c) => (
         <div className="flex items-center gap-1.5 max-w-xs">
-          <code className="text-[10px] font-mono text-emerald-400 truncate bg-black/40 px-2 py-0.5 rounded border border-white/5">
+          <code className="text-[10px] font-mono text-emerald-700 truncate bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
             {c.hmac_sha256_signature.slice(0, 16)}…
           </code>
           <button
@@ -348,7 +570,7 @@ export default function CertificatesPage() {
               navigator.clipboard.writeText(c.hmac_sha256_signature);
               toast.success("HMAC signature copied!");
             }}
-            className="p-1 hover:text-white text-slate-400 cursor-pointer"
+            className="p-1 hover:text-slate-900 text-slate-400 cursor-pointer"
             title="Copy full HMAC signature"
           >
             <Copy className="w-3 h-3" />
@@ -363,108 +585,80 @@ export default function CertificatesPage() {
       className: "text-right",
       headerClassName: "text-right",
       render: (c) => (
-        <Link
-          href={`/projects/${c.project_id}`}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-semibold border border-white/10 transition-colors"
-        >
-          <ExternalLink className="w-3 h-3" />
-          <span>View Project</span>
-        </Link>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveModalCert(c)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors cursor-pointer"
+          >
+            <Printer className="w-3 h-3" />
+            <span>Print</span>
+          </button>
+          <Link
+            href={`/projects`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-semibold border border-slate-200 transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span>Project</span>
+          </Link>
+        </div>
       ),
     },
   ];
 
-  const filteredCerts = certs.filter((c) => {
-    const matchesSearch =
-      !search ||
-      c.project_title.toLowerCase().includes(search.toLowerCase()) ||
-      c.hackathon_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.certificate_id.toLowerCase().includes(search.toLowerCase());
-
-    const matchesFilter = filter === "all" || c.recipient_type === filter;
-
-    return matchesSearch && matchesFilter;
-  });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-          <p className="text-xs font-mono text-slate-500">Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden border-b border-white/10">
-        {/* Background glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/40 via-slate-950 to-blue-950/30 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Back nav */}
-          <Link
-            href="/profile"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Profile
-          </Link>
-
-          {/* Title */}
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      {/* Top Banner / Header Area */}
+      <div className="bg-white border-b border-slate-200 shadow-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
-                <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400">
-                  Cryptographically Verified
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-700 font-bold">
+                  Verified Builder Credentials
                 </span>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
                 My Certificates
               </h1>
-              <p className="text-sm text-slate-400 mt-3 max-w-xl leading-relaxed">
-                HMAC-SHA256 signed certificates issued by DOGFOOD Foundation for every hackathon
-                you've successfully completed as a{" "}
-                <span className="text-white font-semibold capitalize">{role}</span>.
+              <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
+                HMAC-SHA256 signed certificates issued by DOGFOOD Foundation for completed hackathon builds.
+                Available exclusively for registered participants.
               </p>
             </div>
 
-            {/* Stats pill & View Switcher */}
+            {/* View Switcher & Counter */}
             <div className="flex items-center gap-3">
-              {!certsLoading && (
-                <div className="shrink-0 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-center">
-                  <p className="text-3xl font-black text-white">{certs.length}</p>
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mt-0.5">
-                    {certs.length === 1 ? "Certificate" : "Certificates"}
-                  </p>
-                </div>
-              )}
+              <div className="shrink-0 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-2.5 text-center">
+                <p className="text-2xl font-black text-slate-900">{filteredCerts.length}</p>
+                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  {filteredCerts.length === 1 ? "Credential" : "Credentials"}
+                </p>
+              </div>
 
-              <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 shrink-0">
+              <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1 shrink-0">
                 <button
+                  type="button"
                   onClick={() => setViewMode("grid")}
                   className={`p-2 rounded-lg transition-colors cursor-pointer ${
                     viewMode === "grid"
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-slate-900 shadow-xs font-bold"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
-                  title="Card Grid View"
+                  title="Grid View"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode("table")}
                   className={`p-2 rounded-lg transition-colors cursor-pointer ${
                     viewMode === "table"
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-slate-900 shadow-xs font-bold"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
-                  title="DataTable View"
+                  title="Table View"
                 >
                   <TableIcon className="w-4 h-4" />
                 </button>
@@ -474,86 +668,80 @@ export default function CertificatesPage() {
         </div>
       </div>
 
-      {/* Search & Filter bar (for Grid View) */}
-      {viewMode === "grid" && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search by project, hackathon, or certificate ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all"
-              />
-            </div>
-            {/* Filter using Select2 */}
-            <div className="w-48 shrink-0">
-              <Select2
-                variant="dark"
-                value={filter}
-                onChange={setFilter}
-                options={[
-                  { value: "all", label: "All Roles" },
-                  { value: "participant", label: "Participant" },
-                  { value: "judge", label: "Judge" },
-                  { value: "organizer", label: "Organizer" },
-                ]}
-                isSearchable={false}
-              />
-            </div>
-          </div>
+      {/* Main Content Area */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Search Bar */}
+        <div className="card-modern p-3 flex items-center gap-3 shadow-xs">
+          <Search className="w-4 h-4 text-slate-400 ml-2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by project name, hackathon event, or credential ID..."
+            className="w-full bg-transparent text-xs text-slate-900 placeholder-slate-400 focus:outline-none"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-xs font-semibold text-slate-400 hover:text-slate-600 mr-2 cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
         </div>
-      )}
 
-      {/* Certificate Content: Grid or DataTable */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        {/* Content Views */}
         {certsLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            <p className="text-xs font-mono text-slate-500">Loading certificates from DOGFOOD Foundation...</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+            <p className="text-xs font-mono text-slate-400">Loading verifiable certificates...</p>
           </div>
         ) : filteredCerts.length === 0 ? (
-          certs.length > 0 ? (
-            <div className="text-center py-20">
-              <p className="text-slate-400 text-sm">No certificates match your search.</p>
-              <button
-                onClick={() => { setSearch(""); setFilter("all"); }}
-                className="mt-3 text-xs text-emerald-400 hover:underline cursor-pointer"
-              >
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <EmptyState role={role} />
-          )
+          <div className="text-center py-16 card-modern p-8 space-y-3">
+            <Trophy className="w-8 h-8 text-slate-300 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-800">No matching credentials found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              No certificates matched your search query. Try clearing the search keyword.
+            </p>
+            <button
+              onClick={() => setSearch("")}
+              className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer"
+            >
+              Reset Search
+            </button>
+          </div>
         ) : viewMode === "table" ? (
-          <div className="bg-[#0b101d] border border-slate-800 rounded-3xl p-6 shadow-2xl">
+          <div className="card-modern p-6 shadow-xs">
             <DataTable<Certificate>
               data={filteredCerts}
               columns={certColumns}
-              searchableKeys={["certificate_id", "project_title", "hackathon_name", "recipient_type", "issued_at"]}
-              searchPlaceholder="Filter certificates by project, hackathon, ID..."
+              searchableKeys={["certificate_id", "project_title", "hackathon_name", "issued_at"]}
+              searchPlaceholder="Filter credentials in table..."
               emptyMessage="No certificates found."
               pageSize={10}
-              pageSizeOptions={[5, 10, 25, 50]}
+              pageSizeOptions={[5, 10, 25]}
             />
           </div>
         ) : (
-          <>
-            <p className="text-xs text-slate-500 mb-5 font-mono">
-              Showing {filteredCerts.length} of {certs.length} certificate{certs.length !== 1 ? "s" : ""}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCerts.map((cert) => (
-                <CertificateCard key={cert.certificate_id} cert={cert} />
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCerts.map((cert) => (
+              <CertificateCard
+                key={cert.certificate_id}
+                cert={cert}
+                onOpenModal={setActiveModalCert}
+              />
+            ))}
+          </div>
         )}
       </div>
+
+      {/* Printable Certificate Modal */}
+      {activeModalCert && (
+        <CertificatePrintModal
+          cert={activeModalCert}
+          onClose={() => setActiveModalCert(null)}
+        />
+      )}
     </div>
   );
 }

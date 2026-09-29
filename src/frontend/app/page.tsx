@@ -2,12 +2,40 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Sparkles, Clock, CheckCircle2, ArrowRight, ShieldCheck, Flame, Users, Trophy } from "lucide-react";
 import { fetchEvents, isEventRegistrationOpen, Hackathon } from "@/lib/api";
+import { getStoredUser, fetchCurrentUser } from "@/lib/auth";
+import { formatDateSafe, parseSafeDate } from "@/lib/dateUtils";
 
 export default function Home() {
+  const router = useRouter();
   const [events, setEvents] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Redirect authenticated users away from root landing page to their dashboard
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user) {
+      if (user.role === "organizer") router.replace("/dashboard/organizer");
+      else if (user.role === "judge") router.replace("/dashboard/judge");
+      else if (user.role === "admin") router.replace("/admin");
+      else router.replace("/dashboard");
+      return;
+    }
+
+    fetchCurrentUser().then((remote) => {
+      if (remote) {
+        if (remote.role === "organizer") router.replace("/dashboard/organizer");
+        else if (remote.role === "judge") router.replace("/dashboard/judge");
+        else if (remote.role === "admin") router.replace("/admin");
+        else router.replace("/dashboard");
+      } else {
+        setIsCheckingAuth(false);
+      }
+    });
+  }, [router]);
 
   useEffect(() => {
     fetchEvents()
@@ -21,6 +49,10 @@ export default function Home() {
   const totalBuilders = events.reduce((sum, e) => sum + (e.participantCount || 0), 0);
   const totalSubmissions = events.reduce((sum, e) => sum + (e.submissionCount || 0), 0);
   const displayedEvents = events.slice(0, 3);
+
+  if (isCheckingAuth && getStoredUser()) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
 
   return (
     <div className="space-y-24 pb-20">
@@ -153,12 +185,10 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {displayedEvents.map((h) => {
               const regState = isEventRegistrationOpen(h);
-              const isUpcoming = h.startDate ? new Date(h.startDate) > new Date() : false;
+              const isUpcoming = h.startDate ? (parseSafeDate(h.startDate)?.getTime() || 0) > Date.now() : false;
               const gradientClass = h.gradient || "from-blue-600 via-indigo-600 to-sky-500";
               const deadlineDate = h.registration_deadline || h.registrationDeadline || h.submissions_close || h.endDate;
-              const formattedDeadline = deadlineDate
-                ? new Date(deadlineDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                : "Open";
+              const formattedDeadline = formatDateSafe(deadlineDate, "Open");
 
               return (
                 <div key={h.id || h.slug} className="card-modern overflow-hidden flex flex-col justify-between group">

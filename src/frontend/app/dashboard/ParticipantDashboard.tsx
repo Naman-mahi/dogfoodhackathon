@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AuthUser, logoutUser } from "../../lib/auth";
 import { fetchEvents, fetchMyRegistrations, registerForEvent, unregisterFromEvent, isEventRegistrationOpen, EventData } from "../../lib/api";
+import { formatDateSafe, parseSafeDate } from "../../lib/dateUtils";
 import toast from "react-hot-toast";
 
 interface ParticipantDashboardProps {
@@ -194,10 +195,10 @@ export default function ParticipantDashboard({ user }: ParticipantDashboardProps
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {registeredEvents.map((ev) => {
               const isClosed = ev.submissions_close
-                ? new Date(ev.submissions_close) <= new Date()
+                ? (parseSafeDate(ev.submissions_close)?.getTime() || 0) <= Date.now()
                 : false;
               const isUpcoming = ev.startDate
-                ? new Date(ev.startDate) > new Date()
+                ? (parseSafeDate(ev.startDate)?.getTime() || 0) > Date.now()
                 : false;
 
               return (
@@ -247,12 +248,7 @@ export default function ParticipantDashboard({ user }: ParticipantDashboardProps
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                         <div className="text-slate-400 font-medium">Deadline</div>
                         <div className="font-mono text-slate-700 text-[10px]">
-                          {ev.submissions_close
-                            ? new Date(ev.submissions_close).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "TBD"}
+                          {formatDateSafe(ev.submissions_close, "TBD")}
                         </div>
                       </div>
                     </div>

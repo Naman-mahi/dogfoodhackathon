@@ -27,6 +27,7 @@ import { AuthUser, getStoredUser, fetchCurrentUser } from "@/lib/auth";
 import toast from "react-hot-toast";
 import DataTable, { ColumnDef } from "@/components/DataTable";
 import Select2 from "@/components/Select2";
+import { formatDateTimeSafe } from "@/lib/dateUtils";
 
 interface UserItem {
   id: string;
@@ -346,7 +347,7 @@ function AdminConsoleContent() {
       sortable: true,
       className: "text-right text-slate-400 font-mono text-[11px]",
       headerClassName: "text-right",
-      render: (log) => new Date(log.timestamp).toLocaleString(),
+      render: (log) => formatDateTimeSafe(log.timestamp, "Just now"),
     },
   ];
 

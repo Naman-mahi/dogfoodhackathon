@@ -1,7 +1,7 @@
-# DOGFOOD 2026: The Hackathon Platform That Judges You
+# DOGFOOD: Autonomous Hackathon Evaluation & Scoring Platform
 
 > *"Build the platform that will judge you."*  
-> An open-source, self-hostable hackathon evaluation and management platform engineered for offline resilience, rigorous Bayesian score calibration, zero-trust backend role isolation, and a modern container-fluid UI.
+> An open-source, self-hostable hackathon evaluation and management platform engineered for offline resilience, rigorous Empirical Bayes score calibration, zero-trust backend role isolation, and a modern container-fluid light-themed UI.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.3-black)](https://nextjs.org/)
@@ -18,13 +18,14 @@ The entire platform runs completely offline on a **single port (`8080`)** with z
 ```bash
 docker compose up --build
 ```
-*Or run via Docker standalone:*
+
+*Or via Docker standalone:*
 ```bash
 docker build -t dogfood-portal:latest .
 docker run -d --name dogfood-portal -p 8080:8080 dogfood-portal:latest
 ```
 
-Once running, everything is accessible on **`http://localhost:8080`**:
+Once running, the application is live on **`http://localhost:8080`**:
 
 | Route | Description | Target Role |
 |---|---|---|
@@ -34,41 +35,77 @@ Once running, everything is accessible on **`http://localhost:8080`**:
 | [`/results`](http://localhost:8080/results) | Empirical Bayes Score Normalization Leaderboard | Public / All |
 | [`/dashboard`](http://localhost:8080/dashboard) | Role-Based Master Console Dispatcher | Authenticated |
 | [`/dashboard/organizer`](http://localhost:8080/dashboard/organizer) | Organizer Hub (Events, Rubrics, Progress, CSV Export) | Organizer |
+| [`/manage-evaluations`](http://localhost:8080/manage-evaluations) | 100% Dynamic Judge Evaluation Progress Console | Organizer / Admin |
 | [`/dashboard/judge`](http://localhost:8080/dashboard/judge) | Judge Console (Peer-Isolated Queue & Rubrics) | Judge |
-| [`/dashboard/hackathon/[slug]`](http://localhost:8080/dashboard/hackathon/agent-forge-2026) | Participant Workspace (Overview, Tracks, Teams, Submissions) | Participant |
-| [`/events/new`](http://localhost:8080/events/new) | Multi-Step Hackathon Creation Wizard | Organizer |
-| [`/profile`](http://localhost:8080/profile) | Public Persona, Stats & Badges | Authenticated |
+| [`/admin`](http://localhost:8080/admin) | Dedicated System Administration Console | Admin |
+| [`/profile`](http://localhost:8080/profile) | User Persona, Stats & Badges | Authenticated |
 | [`/settings`](http://localhost:8080/settings) | Account & Security Customization | Authenticated |
+| [`/change-password`](http://localhost:8080/change-password) | Self-Service Password Management | Authenticated |
+| [`/certificates`](http://localhost:8080/certificates) | Digital Completion & Winner Certificates | Participant |
 | [`/docs`](http://localhost:8080/docs) | Interactive Swagger UI API Documentation | Public / Devs |
 
 ---
 
-## 2. Test Personas & Auth Credentials
+## 2. Test Personas & Authentication Credentials
 
-The database is deterministically pre-seeded with test sessions on initial container startup:
+The database is deterministically pre-seeded with test personas on initial container startup:
 
-| Role | Persona Name | Email | Password | Session Cookie | Access Summary |
-|---|---|---|---|---|---|
-| **Organizer** | Lead Coordinator | `foundation@dogfood.internal` | `dogfood2026` | `session=org_7f2a` | Full event creation, rubric weights, judge progress, CSV export |
-| **Judge A** | Tomas Varga (`jdg_01`) | `tomas.varga@example.org` | `Password123!` | `session=jdg_a_91bc` | Blind evaluation queue, track rubric scores, peer isolation |
-| **Judge B** | Wei Lindqvist (`jdg_02`) | `wei.lindqvist@example.org` | `Password123!` | `session=jdg_b_44de` | Blind evaluation queue, track rubric scores, peer isolation |
-| **Participant** | Ada Lovelace | `ada@example.org` | `Password123!` | `session=prt_2e88` | Project submissions, team invite links, registered hackathons |
-
----
-
-## 3. Key Architectural Highlights
-
-- **Container-Fluid UI:** The entire interface is built using full-width fluid layouts (`w-full px-4 sm:px-6 lg:px-8` and `.container-fluid`), eliminating cramped fixed-width boxes.
-- **Strict 10-Color Design System:** Centralized in `globals.css`, adhering to a disciplined, premium palette without arbitrary color clutter.
-- **Fixed Sidebar Consoles:** Organizer and Judge workspaces feature a sticky, full-height sidebar (`sticky top-16 h-[calc(100vh-4rem)]`) with internal scrolling and a pinned bottom profile card with dropdown navigation.
-- **Zero-Modal Profile Navigation:** User profile and settings open directly into full, dedicated pages (`/profile`, `/settings`).
-- **Footer Suppression:** Public website footers are cleanly omitted across all internal workspace and console screens (`/dashboard`, `/dashboard/organizer`, `/dashboard/judge`, `/events/new`), while preserved on public visitor pages.
-- **Backend-Enforced Role Isolation:** Zero-trust HTTP dependencies ensure judges cannot inspect peer evaluations, and participants cannot access evaluation rubrics.
-- **Empirical Bayes Calibration:** Scores are normalized with shrinkage parameter $k=2.0$, mathematically neutralizing harsh vs. lenient evaluator bias.
+| Role | Persona Name | Email | Password | Primary Console |
+|:---|:---|:---|:---|:---|
+| **System Admin** | System Administrator | `admin@dogfood.internal` | `demo2026` | `/admin` |
+| **Organizer** | Foundation Admin | `organizer@dogfood.dev` | `demo2026` | `/dashboard/organizer` |
+| **Judge 1** | Tomas Varga (`jdg_01`) | `tomas.varga@example.org` | `demo2026` | `/dashboard/judge` |
+| **Judge 2** | Wei Lindqvist (`jdg_02`)| `wei.lindqvist@example.org`| `demo2026` | `/dashboard/judge` |
+| **Participant** | Ada Lovelace | `ada@example.org` | `demo2026` | `/dashboard` |
 
 ---
 
-## 4. Verification via Acceptance Checker
+## 3. Core Architectural Capabilities
+
+### 3.1 100% Dynamic Judge Evaluation Progress
+- Powered by live PostgreSQL aggregations across [`scores`](src/backend/app/db/models/score.py), [`judges`](src/backend/app/db/models/judge.py), and [`projects`](src/backend/app/db/models/project.py) tables.
+- Monitors registered judges (30), verified evaluations submitted (130), queue completion rates (63%), and active vs. pending evaluators.
+- Interactive breakdown reveals exact project ratings, rubric criteria pills, evaluator qualitative critiques, and remaining pending submissions.
+- Algorithmic round-robin track distribution button auto-assigns evaluators with balanced workloads.
+
+### 3.2 Concrete URL Deep-Linking
+Every sidebar item maps to a concrete, bookmarkable URL:
+- `/dashboard/organizer?tab=lifecycle`
+- `/dashboard/organizer?tab=rubric`
+- `/manage-evaluations`
+- `/dashboard/organizer?tab=exports`
+- `/dashboard/judge?tab=isolation`
+- `/dashboard/judge?tab=history`
+- `/dashboard/judge?tab=rubric`
+
+### 3.3 Zero-Trust Peer Isolation Barrier
+- Evaluators score submissions blindly without visibility into peer reviews or competitor scores.
+- Attempting to inspect another judge's score directly throws `HTTP 403 Forbidden` (`PeerIsolationViolationException`).
+
+### 3.4 Empirical Bayes Score Normalization
+- Uses Bayesian shrinkage with parameter $k = 2.0$:
+  $$\hat{\mu}_i = \frac{n_i \cdot \bar{x}_i + k \cdot \mu_0}{n_i + k}$$
+- Mathematically neutralizes harsh vs. lenient evaluator variance to prevent unfair leaderboard skew.
+
+### 3.5 Safe Date Parsing (Zero "Invalid Date" Errors)
+- Universal date utility formats UTC timestamps localized to user display settings without browser rendering glitches.
+
+---
+
+## 4. Documentation Suite (`/docs`)
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- 📐 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System topology, single-port appliance design, reverse proxy, security barriers, and sequence diagrams.
+- 🔌 **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)**: REST endpoints, schemas, authentication, and error codes.
+- 🗄️ **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)**: PostgreSQL models, column constraints, ER diagrams, and indexes.
+- ⚖️ **[docs/JUDGING_AND_SCORING.md](docs/JUDGING_AND_SCORING.md)**: Empirical Bayes variance shrinkage mathematics, rubric weights, and CSV matrix exports.
+- 📖 **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**: Step-by-step operating guide for Admin, Organizer, Judge, and Participant roles.
+- 🚀 **[docs/DEPLOYMENT_AND_OPERATIONS.md](docs/DEPLOYMENT_AND_OPERATIONS.md)**: Production Docker deployment, environment configuration, backup/restore, and health diagnostics.
+
+---
+
+## 5. Verification via Acceptance Checker
 
 Run the official standard-library acceptance test suite against `http://localhost:8080`:
 
@@ -76,18 +113,11 @@ Run the official standard-library acceptance test suite against `http://localhos
 python run.py .dogfood.toml
 ```
 
-### Verified Acceptance Checks:
+### Verified Checks:
 - **T1: Public Gallery Access** (`GET /projects`) $\rightarrow$ `HTTP 200` without authentication.
 - **T1: Fixture Ingestion** $\rightarrow$ Fixture hackathons and projects loaded deterministically.
-- **T1: Deadline Gating** (`POST /projects/new` as participant) $\rightarrow$ Returns `HTTP 403` for closed events.
-- **T2: Judge Score Reading** (`GET /api/judge/scores` as `judge_a`) $\rightarrow$ Returns `HTTP 200`.
-- **T2: Peer Score Isolation** (`GET /api/judge/scores?judge=judge_a` as `judge_b`) $\rightarrow$ Returns `HTTP 403 Forbidden`.
-- **T2: Participant Access Denial** (`GET /api/judge/scores` as participant) $\rightarrow$ Returns `HTTP 403`.
-- **T2: Score Matrix Export** (`GET /api/export.csv` as organizer) $\rightarrow$ Returns valid CSV score matrix.
-
----
-
-## 5. Documentation Links
-
-- **[ARCHITECTURE.md](ARCHITECTURE.md):** In-depth technical architecture, threat models, gateway topology, and scoring mathematical proofs.
-- **[SETUP.md](SETUP.md):** Complete step-by-step bare-metal and Docker deployment guide.
+- **T1: Deadline Gating** (`POST /projects` as participant) $\rightarrow$ Returns `HTTP 403` for closed events.
+- **T2: Judge Score Reading** (`GET /api/v1/judge/scores` as `jdg_01`) $\rightarrow$ Returns `HTTP 200`.
+- **T2: Peer Score Isolation** (`GET /api/v1/judge/scores?judge=jdg_01` as `jdg_02`) $\rightarrow$ Returns `HTTP 403 Forbidden`.
+- **T2: Participant Access Denial** (`GET /api/v1/judge/scores` as participant) $\rightarrow$ Returns `HTTP 403 Forbidden`.
+- **T2: Score Matrix Export** (`GET /api/export.csv` as organizer) $\rightarrow$ Returns valid RFC-4180 CSV matrix.
